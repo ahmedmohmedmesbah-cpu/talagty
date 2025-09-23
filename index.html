@@ -1,89 +1,226 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>طلقتي</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طلقتي - منتجات ألبان بالجملة</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://aistudiocdn.com/react@^19.1.1",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+        "react/": "https://aistudiocdn.com/react@^19.1.1/"
+      }
+    }
+    </script>
+    <link rel="stylesheet" href="/index.css">
 </head>
 <body>
 
-  <!-- هيدر -->
-  <header>
-    <h1 class="logo">طلقتي</h1>
-    <nav>
-      <a href="index.html">الرئيسية</a>
-      <a href="#categories">التصنيفات</a>
-      <a href="#about">من نحن</a>
-      <a href="#contact">تواصل معنا</a>
-    </nav>
-  </header>
+    <header class="header">
+        <nav class="container nav">
+            <a href="index.html" class="nav__logo">
+                <svg class="nav__logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="fridgeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#22d3ee; stop-opacity:1"></stop>
+                        <stop offset="100%" style="stop-color:#06b6d4; stop-opacity:1"></stop>
+                      </linearGradient>
+                    </defs>
+                    <path d="M7 2H17C18.1046 2 19 2.89543 19 4V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V4C5 2.89543 5.89543 2 7 2Z" fill="url(#fridgeGradient)"></path>
+                    <path d="M5 10H19" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round"></path>
+                    <path d="M8 14V18" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+                <span>طلقتي</span>
+            </a>
+            <div class="nav__menu" id="nav-menu">
+                <ul class="nav__list">
+                    <li><a href="index.html" class="nav__link active">الرئيسية</a></li>
+                    <li><a href="category1.html" class="nav__link">الحليب والكريمة</a></li>
+                    <li><a href="category2.html" class="nav__link">الجبن</a></li>
+                    <li><a href="category3.html" class="nav__link">الزبادي والزبدة</a></li>
+                    <li><a href="#contact" class="nav__link">تواصل معنا</a></li>
+                </ul>
+            </div>
+            <div class="nav__actions">
+                <button class="nav__cart-btn" id="cart-toggle">
+                    🛒 <span class="nav__cart-count" id="cart-count">0</span>
+                </button>
+                <button class="nav__toggle" id="nav-toggle">☰</button>
+            </div>
+        </nav>
+    </header>
 
-  <!-- سلايدر -->
-  <section class="hero">
-    <div class="slide active">
-      <img src="assets/slide1.jpg" alt="صورة 1">
-      <div class="caption">مرحباً بكم في موقعنا</div>
+    <main>
+        <!-- Hero Slider -->
+        <section class="hero-slider">
+            <div class="hero-slider__wrapper">
+                <div class="hero-slider__slide active" style="background-image: url('https://picsum.photos/1600/900?random=1');">
+                    <div class="hero-slider__content">
+                        <h1>أفضل منتجات الألبان لعملك</h1>
+                        <p>تعاون مع طلقتي للحصول على الحليب الطازج والجبن والزبادي مع توصيل موثوق.</p>
+                        <a href="#categories" class="btn btn-primary">عرض المنتجات</a>
+                    </div>
+                </div>
+                <div class="hero-slider__slide" style="background-image: url('https://picsum.photos/1600/900?random=2');">
+                    <div class="hero-slider__content">
+                        <h1>جودة ونضارة بلا تنازل</h1>
+                        <p>شبكة التبريد الحديثة تضمن وصول منتجاتك بأفضل حالة في كل مرة.</p>
+                        <a href="#contact" class="btn btn-primary">انضم إلينا</a>
+                    </div>
+                </div>
+                <div class="hero-slider__slide" style="background-image: url('https://picsum.photos/1600/900?random=3');">
+                    <div class="hero-slider__content">
+                        <h1>من المزرعة إلى رف السوبر ماركت</h1>
+                        <p>نعمل مباشرة مع المزارع المحلية لتقديم أفضل منتجات الألبان المختارة.</p>
+                        <a href="category2.html" class="btn btn-primary">استكشف الجبن</a>
+                    </div>
+                </div>
+            </div>
+            <button class="hero-slider__btn hero-slider__btn--prev">&lt;</button>
+            <button class="hero-slider__btn hero-slider__btn--next">&gt;</button>
+            <div class="hero-slider__dots"></div>
+        </section>
+
+        <!-- Categories -->
+        <section id="categories" class="section">
+            <div class="container">
+                <h2 class="section__title">تصنيفات منتجاتنا</h2>
+                <p class="section__subtitle">استكشف مجموعتنا الواسعة من منتجات الألبان المخصصة لاحتياجات السوبرماركت والمطاعم.</p>
+                <div class="category-grid">
+                    <a href="category1.html" class="category-card">
+                        <img src="https://picsum.photos/400/500?random=10" alt="الحليب والكريمة">
+                        <h3>الحليب والكريمة</h3>
+                    </a>
+                    <a href="category2.html" class="category-card">
+                        <img src="https://picsum.photos/400/500?random=11" alt="الجبن">
+                        <h3>الجبن</h3>
+                    </a>
+                    <a href="category3.html" class="category-card">
+                        <img src="https://picsum.photos/400/500?random=12" alt="الزبادي والزبدة">
+                        <h3>الزبادي والزبدة</h3>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quality Widgets -->
+        <section class="section section--light">
+            <div class="container">
+                <div class="widget-grid">
+                    <div class="widget">
+                        <h3 class="widget__title">جودة طازجة من المزرعة</h3>
+                        <p>نتعاون مع المزارع المحلية لضمان أفضل المنتجات الطازجة.</p>
+                    </div>
+                    <div class="widget">
+                        <h3 class="widget__title">لوجستيات تبريد موثوقة</h3>
+                        <p>أسطولنا المبرد يضمن وصول المنتجات بأعلى جودة.</p>
+                    </div>
+                    <div class="widget">
+                        <h3 class="widget__title">مورد معتمد HACCP</h3>
+                        <p>نلتزم بأعلى معايير سلامة الغذاء لضمان جودة منتجاتنا.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Logos -->
+        <section class="section">
+            <div class="container">
+                <h2 class="section__title">موثوق من كبار تجار التجزئة</h2>
+                <div class="logos-grid">
+                    <img src="https://picsum.photos/150/40?grayscale&random=20" alt="شريك">
+                    <img src="https://picsum.photos/150/40?grayscale&random=21" alt="شريك">
+                    <img src="https://picsum.photos/150/40?grayscale&random=22" alt="شريك">
+                    <img src="https://picsum.photos/150/40?grayscale&random=23" alt="شريك">
+                    <img src="https://picsum.photos/150/40?grayscale&random=24" alt="شريك">
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact & About -->
+        <section id="contact" class="section section--light">
+            <div class="container">
+                <h2 class="section__title">تواصل معنا</h2>
+                <p class="section__subtitle">جاهز لملء أرفف متجرك بأفضل منتجات الألبان؟ املأ النموذج أدناه وسنعاود الاتصال بك.</p>
+                <form class="contact-form">
+                    <div class="form-group">
+                        <label for="name">اسمك</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">البريد الإلكتروني</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">رسالتك</label>
+                        <textarea id="message" name="message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary contact-form__btn">إرسال</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-grid">
+            <div class="footer-col">
+                <a href="index.html" class="nav__logo">
+                    <span>طلقتي</span>
+                </a>
+                <p>شريكك الموثوق لتوريد منتجات الألبان بالجملة. الجودة والطزاجة مضمونة.</p>
+            </div>
+            <div class="footer-col">
+                <h4>روابط سريعة</h4>
+                <ul>
+                    <li><a href="index.html">الرئيسية</a></li>
+                    <li><a href="#contact">تواصل معنا</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>التصنيفات</h4>
+                <ul>
+                    <li><a href="category1.html">الحليب والكريمة</a></li>
+                    <li><a href="category2.html">الجبن</a></li>
+                    <li><a href="category3.html">الزبادي والزبدة</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>تابعنا</h4>
+                <div class="footer-socials">
+                    <a href="#">فيسبوك</a>
+                    <a href="#">لينكدإن</a>
+                    <a href="#">تويتر</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2024 طلقتي. جميع الحقوق محفوظة.</p>
+        </div>
+    </footer>
+
+    <!-- Cart Sidebar -->
+    <div class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-sidebar__header">
+            <h2>سلة المشتريات</h2>
+            <button class="cart-sidebar__close" id="cart-close">&times;</button>
+        </div>
+        <div class="cart-sidebar__body" id="cart-body"></div>
+        <div class="cart-sidebar__footer">
+            <div class="cart-sidebar__subtotal">
+                <span>الإجمالي</span>
+                <span id="cart-subtotal">0.00 ج.م</span>
+            </div>
+            <button class="btn btn-primary">إتمام الشراء</button>
+        </div>
     </div>
-    <div class="slide">
-      <img src="assets/slide2.jpg" alt="صورة 2">
-      <div class="caption">أفضل المنتجات في مكان واحد</div>
-    </div>
-    <div class="slide">
-      <img src="assets/slide3.jpg" alt="صورة 3">
-      <div class="caption">خدمة سريعة وموثوقة</div>
-    </div>
-    <button class="prev">&#10094;</button>
-    <button class="next">&#10095;</button>
-  </section>
+    <div class="cart-overlay" id="cart-overlay"></div>
 
-  <!-- التصنيفات -->
-  <section id="categories" class="categories">
-    <h2>التصنيفات</h2>
-    <div class="grid">
-      <a href="category1.html" class="category-btn">الأجهزة المنزلية</a>
-      <a href="category2.html" class="category-btn">الأدوات الكهربائية</a>
-      <a href="category3.html" class="category-btn">مستلزمات المطبخ</a>
-    </div>
-  </section>
-
-  <!-- الجودة -->
-  <section class="quality">
-    <h2>الجودة</h2>
-    <div class="badges">
-      <div class="badge">✔ ISO 9001</div>
-      <div class="badge">✔ منتجات أصلية</div>
-      <div class="badge">✔ أسعار منافسة</div>
-    </div>
-  </section>
-
-  <!-- شركاء العمل -->
-  <section class="partners">
-    <h2>الشركات التي نتعامل معها</h2>
-    <div class="logos">
-      <img src="assets/company1.png" alt="شركة 1">
-      <img src="assets/company2.png" alt="شركة 2">
-      <img src="assets/company3.png" alt="شركة 3">
-    </div>
-  </section>
-
-  <!-- تواصل معنا -->
-  <footer id="contact">
-    <h2>تواصل معنا</h2>
-    <form>
-      <input type="text" placeholder="الاسم" required>
-      <input type="email" placeholder="البريد الإلكتروني" required>
-      <textarea placeholder="اكتب رسالتك هنا" required></textarea>
-      <button type="submit">إرسال</button>
-    </form>
-
-    <!-- من نحن -->
-    <section id="about">
-      <h2>من نحن</h2>
-      <p>نحن فريق متخصص في تقديم أفضل المنتجات والخدمات لعملائنا في مصر. هدفنا هو توفير تجربة تسوق سهلة وسريعة مع ضمان الجودة والأسعار المناسبة.</p>
-    </section>
-  </footer>
-
-  <script src="script.js"></script>
+    <script src="script.js" defer></script>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>
