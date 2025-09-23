@@ -1,88 +1,89 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>موقع طلقتي</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>طلقتي</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-    <!-- الهيدر -->
-    <header>
-        <h1>طلقتي</h1>
-        <nav>
-            <a href="index.html">الرئيسية</a>
-            <a href="#categories">التصنيفات</a>
-            <a href="#about">من نحن</a>
-            <a href="#contact">تواصل معنا</a>
-        </nav>
-    </header>
+  <!-- هيدر -->
+  <header>
+    <h1 class="logo">طلقتي</h1>
+    <nav>
+      <a href="index.html">الرئيسية</a>
+      <a href="#categories">التصنيفات</a>
+      <a href="#about">من نحن</a>
+      <a href="#contact">تواصل معنا</a>
+    </nav>
+  </header>
 
-    <!-- سلايدر -->
-    <section class="hero">
-        <div class="slide active">
-            <img src="assets/slide1.jpg" alt="صورة 1">
-            <div class="caption">مرحباً بكم في موقعنا</div>
-        </div>
-        <div class="slide">
-            <img src="assets/slide2.jpg" alt="صورة 2">
-            <div class="caption">أفضل المنتجات في مكان واحد</div>
-        </div>
-        <div class="slide">
-            <img src="assets/slide3.jpg" alt="صورة 3">
-            <div class="caption">خدمة سريعة وموثوقة</div>
-        </div>
-        <button class="prev">&#10094;</button>
-        <button class="next">&#10095;</button>
+  <!-- سلايدر -->
+  <section class="hero">
+    <div class="slide active">
+      <img src="assets/slide1.jpg" alt="صورة 1">
+      <div class="caption">مرحباً بكم في موقعنا</div>
+    </div>
+    <div class="slide">
+      <img src="assets/slide2.jpg" alt="صورة 2">
+      <div class="caption">أفضل المنتجات في مكان واحد</div>
+    </div>
+    <div class="slide">
+      <img src="assets/slide3.jpg" alt="صورة 3">
+      <div class="caption">خدمة سريعة وموثوقة</div>
+    </div>
+    <button class="prev">&#10094;</button>
+    <button class="next">&#10095;</button>
+  </section>
+
+  <!-- التصنيفات -->
+  <section id="categories" class="categories">
+    <h2>التصنيفات</h2>
+    <div class="grid">
+      <a href="category1.html" class="category-btn">الأجهزة المنزلية</a>
+      <a href="category2.html" class="category-btn">الأدوات الكهربائية</a>
+      <a href="category3.html" class="category-btn">مستلزمات المطبخ</a>
+    </div>
+  </section>
+
+  <!-- الجودة -->
+  <section class="quality">
+    <h2>الجودة</h2>
+    <div class="badges">
+      <div class="badge">✔ ISO 9001</div>
+      <div class="badge">✔ منتجات أصلية</div>
+      <div class="badge">✔ أسعار منافسة</div>
+    </div>
+  </section>
+
+  <!-- شركاء العمل -->
+  <section class="partners">
+    <h2>الشركات التي نتعامل معها</h2>
+    <div class="logos">
+      <img src="assets/company1.png" alt="شركة 1">
+      <img src="assets/company2.png" alt="شركة 2">
+      <img src="assets/company3.png" alt="شركة 3">
+    </div>
+  </section>
+
+  <!-- تواصل معنا -->
+  <footer id="contact">
+    <h2>تواصل معنا</h2>
+    <form>
+      <input type="text" placeholder="الاسم" required>
+      <input type="email" placeholder="البريد الإلكتروني" required>
+      <textarea placeholder="اكتب رسالتك هنا" required></textarea>
+      <button type="submit">إرسال</button>
+    </form>
+
+    <!-- من نحن -->
+    <section id="about">
+      <h2>من نحن</h2>
+      <p>نحن فريق متخصص في تقديم أفضل المنتجات والخدمات لعملائنا في مصر. هدفنا هو توفير تجربة تسوق سهلة وسريعة مع ضمان الجودة والأسعار المناسبة.</p>
     </section>
+  </footer>
 
-    <!-- التصنيفات -->
-    <section id="categories" class="categories">
-        <h2>التصنيفات</h2>
-        <div class="grid">
-            <a href="category1.html" class="category-btn">الأجهزة المنزلية</a>
-            <a href="category2.html" class="category-btn">الأدوات الكهربائية</a>
-            <a href="category3.html" class="category-btn">مستلزمات المطبخ</a>
-        </div>
-    </section>
-
-    <!-- الجودة -->
-    <section class="quality">
-        <h2>جودة عالية</h2>
-        <div class="badges">
-            <div class="badge">✔ ISO 9001</div>
-            <div class="badge">✔ منتجات أصلية</div>
-            <div class="badge">✔ أسعار تنافسية</div>
-        </div>
-    </section>
-
-    <!-- الشركات التي نتعامل معها -->
-    <section class="partners">
-        <h2>شركاؤنا</h2>
-        <div class="logos">
-            <img src="assets/company1.png" alt="شركة 1">
-            <img src="assets/company2.png" alt="شركة 2">
-            <img src="assets/company3.png" alt="شركة 3">
-        </div>
-    </section>
-
-    <!-- تواصل معنا + من نحن -->
-    <footer id="contact">
-        <h2>تواصل معنا</h2>
-        <form>
-            <input type="text" placeholder="الاسم" required>
-            <input type="email" placeholder="البريد الإلكتروني" required>
-            <textarea placeholder="اكتب رسالتك هنا" required></textarea>
-            <button type="submit">إرسال</button>
-        </form>
-
-        <section id="about">
-            <h2>من نحن</h2>
-            <p>نحن فريق متخصص في تقديم أفضل المنتجات لعملائنا في مصر. هدفنا هو توفير تجربة تسوق سهلة وسريعة.</p>
-        </section>
-    </footer>
-
-    <script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
