@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tallagty - Premium B2B Dairy</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+
+    <header class="header">
+        <nav class="container nav">
+            <a href="index.html" class="nav__logo">
+                <svg class="nav__logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="fridgeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#22d3ee; stop-opacity:1"></stop>
+                        <stop offset="100%" style="stop-color:#06b6d4; stop-opacity:1"></stop>
+                      </linearGradient>
+                    </defs>
+                    <path d="M7 2H17C18.1046 2 19 2.89543 19 4V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V4C5 2.89543 5.89543 2 7 2Z" fill="url(#fridgeGradient)"></path>
+                    <path d="M5 10H19" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round"></path>
+                    <path d="M8 14V18" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+                <span>Tallagty</span>
+            </a>
+            <div class="nav__menu" id="nav-menu">
+                <ul class="nav__list">
+                    <li><a href="index.html" class="nav__link active">Home</a></li>
+                    <li><a href="category1.html" class="nav__link">Milk & Cream</a></li>
+                    <li><a href="category2.html" class="nav__link">Cheese</a></li>
+                    <li><a href="category3.html" class="nav__link">Yogurt & Butter</a></li>
+                    <li><a href="#contact" class="nav__link">Contact</a></li>
+                </ul>
+            </div>
+            <div class="nav__actions">
+                <button class="nav__cart-btn" id="cart-toggle">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.658-.463 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+                    <span class="nav__cart-count" id="cart-count">0</span>
+                </button>
+                <button class="nav__toggle" id="nav-toggle">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Hero Slider -->
+        <section class="hero-slider">
+            <div class="hero-slider__wrapper">
+                <div class="hero-slider__slide active" style="background-image: url('https://picsum.photos/1600/900?random=1');">
+                    <div class="hero-slider__content">
+                        <h1>Premium Dairy for Your Business</h1>
+                        <p>Partner with Tallagty for the freshest milk, artisanal cheeses, and cultured products, delivered reliably.</p>
+                        <a href="#categories" class="btn btn-primary">View Our Products</a>
+                    </div>
+                </div>
+                <div class="hero-slider__slide" style="background-image: url('https://picsum.photos/1600/900?random=2');">
+                    <div class="hero-slider__content">
+                        <h1>Uncompromising Quality & Freshness</h1>
+                        <p>Our state-of-the-art cold chain logistics ensure your dairy products arrive in perfect condition, every time.</p>
+                        <a href="#contact" class="btn btn-primary">Become a Partner</a>
+                    </div>
+                </div>
+                <div class="hero-slider__slide" style="background-image: url('https://picsum.photos/1600/900?random=3');">
+                    <div class="hero-slider__content">
+                        <h1>From Farm to Supermarket Shelf</h1>
+                        <p>We work directly with local farms to bring you a curated selection of the finest dairy goods.</p>
+                        <a href="category2.html" class="btn btn-primary">Explore Cheeses</a>
+                    </div>
+                </div>
+            </div>
+            <button class="hero-slider__btn hero-slider__btn--prev">&lt;</button>
+            <button class="hero-slider__btn hero-slider__btn--next">&gt;</button>
+            <div class="hero-slider__dots"></div>
+        </section>
+
+        <!-- Categories -->
+        <section id="categories" class="section">
+            <div class="container">
+                <h2 class="section__title">Our Product Categories</h2>
+                <p class="section__subtitle">Explore our diverse range of dairy products, tailored for the needs of modern supermarkets and food businesses.</p>
+                <div class="category-grid">
+                    <a href="category1.html" class="category-card">
+                        <img src="https://picsum.photos/400/500?random=10" alt="Milk and Cream">
+                        <h3>Milk & Cream</h3>
+                    </a>
+                    <a href="category2.html" class="category-card">
+                        <img src="https://picsum.photos/400/500?random=11" alt="Artisanal Cheeses">
+                        <h3>Artisanal Cheeses</h3>
+                    </a>
+                    <a href="category3.html" class="category-card">
+                        <img src="https://picsum.photos/400/500?random=12" alt="Yogurt and Butter">
+                        <h3>Yogurt & Butter</h3>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quality Widgets -->
+        <section class="section section--light">
+            <div class="container">
+                <div class="widget-grid">
+                    <div class="widget">
+                        <div class="widget__icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.542L16.5 21.75l-.398-1.208a3.375 3.375 0 00-2.456-2.456L12.75 18l1.208-.398a3.375 3.375 0 002.456-2.456L16.5 14.25l.398 1.208a3.375 3.375 0 002.456 2.456L20.25 18l-1.208.398a3.375 3.375 0 00-2.456 2.456z" /></svg>
+                        </div>
+                        <h3 class="widget__title">Farm-Fresh Quality</h3>
+                        <p>We partner with local dairies to ensure the freshest, highest-quality products.</p>
+                    </div>
+                    <div class="widget">
+                        <div class="widget__icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125V14.25m-17.25 4.5v-1.875a3.375 3.375 0 003.375-3.375h1.5a1.125 1.125 0 011.125 1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375m15.75 0v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5c0-.621.504-1.125 1.125-1.125h13.5c.621 0 1.125.504 1.125 1.125v15.75c0 .621-.504 1.125-1.125 1.125h-1.5" /></svg>
+                        </div>
+                        <h3 class="widget__title">Reliable Cold Chain Logistics</h3>
+                        <p>Our temperature-controlled fleet guarantees product integrity from our door to yours.</p>
+                    </div>
+                    <div class="widget">
+                        <div class="widget__icon">
+                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </div>
+                        <h3 class="widget__title">HACCP Certified Supplier</h3>
+                        <p>We adhere to the strictest food safety standards to ensure product safety and quality.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Logos -->
+        <section class="section">
+            <div class="container">
+                 <h2 class="section__title">Trusted by Leading Retailers</h2>
+                <div class="logos-grid">
+                    <img src="https://picsum.photos/150/40?grayscale&random=20" alt="Partner Logo">
+                    <img src="https://picsum.photos/150/40?grayscale&random=21" alt="Partner Logo">
+                    <img src="https://picsum.photos/150/40?grayscale&random=22" alt="Partner Logo">
+                    <img src="https://picsum.photos/150/40?grayscale&random=23" alt="Partner Logo">
+                    <img src="https://picsum.photos/150/40?grayscale&random=24" alt="Partner Logo">
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact & About -->
+        <section id="contact" class="section section--light">
+            <div class="container">
+                <h2 class="section__title">Become a Partner</h2>
+                <p class="section__subtitle">Ready to stock your shelves with premium dairy? Fill out the form below to get in touch with our sales team.</p>
+                <form class="contact-form">
+                    <div class="form-group">
+                        <label for="name">Your Name</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Business Email</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Your Message</label>
+                        <textarea id="message" name="message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary contact-form__btn">Send Inquiry</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-grid">
+             <div class="footer-col">
+                <a href="index.html" class="nav__logo">
+                    <svg class="nav__logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 2H17C18.1046 2 19 2.89543 19 4V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V4C5 2.89543 5.89543 2 7 2Z" fill="url(#fridgeGradient)"></path>
+                        <path d="M5 10H19" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round"></path>
+                        <path d="M8 14V18" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                    <span>Tallagty</span>
+                </a>
+                <p>Your trusted partner for premium B2B dairy supplies. Freshness and quality, delivered.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="#contact">Contact Us</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Product Categories</h4>
+                <ul>
+                    <li><a href="category1.html">Milk & Cream</a></li>
+                    <li><a href="category2.html">Artisanal Cheeses</a></li>
+                    <li><a href="category3.html">Yogurt & Butter</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Follow Us</h4>
+                <div class="footer-socials">
+                    <a href="#">Facebook</a>
+                    <a href="#">LinkedIn</a>
+                    <a href="#">Twitter</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 Tallagty. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Cart Sidebar -->
+    <div class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-sidebar__header">
+            <h2>Your Cart</h2>
+            <button class="cart-sidebar__close" id="cart-close">&times;</button>
+        </div>
+        <div class="cart-sidebar__body" id="cart-body"></div>
+        <div class="cart-sidebar__footer">
+            <div class="cart-sidebar__subtotal">
+                <span>Subtotal</span>
+                <span id="cart-subtotal">$0.00</span>
+            </div>
+            <button class="btn btn-primary">Proceed to Checkout</button>
+        </div>
+    </div>
+    <div class="cart-overlay" id="cart-overlay"></div>
+
+    <script src="script.js" defer></script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

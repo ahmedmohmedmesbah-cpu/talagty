@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artisanal Cheeses - Tallagty</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header class="header">
+        <nav class="container nav">
+            <a href="index.html" class="nav__logo">
+                <svg class="nav__logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="fridgeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#22d3ee; stop-opacity:1"></stop>
+                        <stop offset="100%" style="stop-color:#06b6d4; stop-opacity:1"></stop>
+                      </linearGradient>
+                    </defs>
+                    <path d="M7 2H17C18.1046 2 19 2.89543 19 4V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V4C5 2.89543 5.89543 2 7 2Z" fill="url(#fridgeGradient)"></path>
+                    <path d="M5 10H19" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round"></path>
+                    <path d="M8 14V18" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+                <span>Tallagty</span>
+            </a>
+            <div class="nav__menu" id="nav-menu">
+                <ul class="nav__list">
+                    <li><a href="index.html" class="nav__link">Home</a></li>
+                    <li><a href="category1.html" class="nav__link">Milk & Cream</a></li>
+                    <li><a href="category2.html" class="nav__link active">Cheese</a></li>
+                    <li><a href="category3.html" class="nav__link">Yogurt & Butter</a></li>
+                    <li><a href="index.html#contact" class="nav__link">Contact</a></li>
+                </ul>
+            </div>
+            <div class="nav__actions">
+                <button class="nav__cart-btn" id="cart-toggle">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.658-.463 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+                    <span class="nav__cart-count" id="cart-count">0</span>
+                </button>
+                <button class="nav__toggle" id="nav-toggle">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="section section--light">
+        <div class="container">
+            <div class="breadcrumb">
+                <a href="index.html">Home</a> &gt; <span>Artisanal Cheeses</span>
+            </div>
+            <h1 class="section__title">Artisanal Cheeses</h1>
+            <p class="section__subtitle">Discover our wide selection of high-quality cheeses, from classic blocks to specialty varieties.</p>
+            
+            <div class="product-grid">
+                <!-- Product 1 -->
+                <div class="product-card">
+                    <img src="https://picsum.photos/400/400?random=33" alt="Aged Cheddar Block" class="product-card__image">
+                    <div class="product-card__content">
+                        <h3 class="product-card__title">Aged Cheddar Block</h3>
+                        <p class="product-card__desc">Sharp, nutty aged cheddar. Price per lb.</p>
+                        <div class="product-card__footer">
+                            <span class="product-card__price">$8.50</span>
+                            <button class="btn btn-primary product-card__btn add-to-cart-btn" data-product-id="ch1">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Product 2 -->
+                <div class="product-card">
+                    <img src="https://picsum.photos/400/400?random=34" alt="Fresh Mozzarella Log" class="product-card__image">
+                    <div class="product-card__content">
+                        <h3 class="product-card__title">Fresh Mozzarella Log</h3>
+                        <p class="product-card__desc">Soft, milky mozzarella. Perfect for pizzerias.</p>
+                        <div class="product-card__footer">
+                            <span class="product-card__price">$6.75</span>
+                            <button class="btn btn-primary product-card__btn add-to-cart-btn" data-product-id="ch2">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Product 3 -->
+                <div class="product-card">
+                    <img src="https://picsum.photos/400/400?random=35" alt="Bulk Swiss Cheese" class="product-card__image">
+                    <div class="product-card__content">
+                        <h3 class="product-card__title">Bulk Swiss Cheese</h3>
+                        <p class="product-card__desc">Classic holey swiss cheese, great for slicing.</p>
+                        <div class="product-card__footer">
+                            <span class="product-card__price">$7.20</span>
+                            <button class="btn btn-primary product-card__btn add-to-cart-btn" data-product-id="ch3">Add to Cart</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-grid">
+             <div class="footer-col">
+                <a href="index.html" class="nav__logo">
+                    <svg class="nav__logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7 2H17C18.1046 2 19 2.89543 19 4V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V4C5 2.89543 5.89543 2 7 2Z" fill="url(#fridgeGradient)"></path>
+                        <path d="M5 10H19" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round"></path>
+                        <path d="M8 14V18" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                    <span>Tallagty</span>
+                </a>
+                <p>Your trusted partner for premium B2B dairy supplies. Freshness and quality, delivered.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="index.html#contact">Contact Us</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Product Categories</h4>
+                <ul>
+                    <li><a href="category1.html">Milk & Cream</a></li>
+                    <li><a href="category2.html">Artisanal Cheeses</a></li>
+                    <li><a href="category3.html">Yogurt & Butter</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Follow Us</h4>
+                <div class="footer-socials">
+                    <a href="#">Facebook</a>
+                    <a href="#">LinkedIn</a>
+                    <a href="#">Twitter</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 Tallagty. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Cart Sidebar -->
+    <div class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-sidebar__header">
+            <h2>Your Cart</h2>
+            <button class="cart-sidebar__close" id="cart-close">&times;</button>
+        </div>
+        <div class="cart-sidebar__body" id="cart-body"></div>
+        <div class="cart-sidebar__footer">
+            <div class="cart-sidebar__subtotal">
+                <span>Subtotal</span>
+                <span id="cart-subtotal">$0.00</span>
+            </div>
+            <button class="btn btn-primary">Proceed to Checkout</button>
+        </div>
+    </div>
+    <div class="cart-overlay" id="cart-overlay"></div>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
