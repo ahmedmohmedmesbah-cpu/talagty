@@ -1,0 +1,216 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Tallagty</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* Simple scoped admin styles */
+    .admin-container{max-width:1100px;margin:40px auto;padding:0 16px}
+    .admin-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+    .admin-title{font-size:28px;font-weight:700}
+    .admin-grid{display:grid;grid-template-columns:1fr;gap:24px}
+    @media(min-width:900px){.admin-grid{grid-template-columns:1fr 1fr}}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .card h2{font-size:18px;font-weight:600;margin:0;padding:16px;border-bottom:1px solid #f1f5f9}
+    .card-body{padding:16px}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{border-bottom:1px solid #f1f5f9;padding:8px;text-align:left}
+    .table th{font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.04em}
+    .actions{display:flex;gap:8px}
+    .btn{display:inline-flex;align-items:center;gap:8px;background:#06b6d4;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-weight:600;cursor:pointer}
+    .btn.secondary{background:#0ea5e9}
+    .btn.danger{background:#ef4444}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .input{width:100%;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px}
+    .muted{font-size:12px;color:#64748b}
+    .inline{display:flex;gap:8px;align-items:center}
+    .badge{display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;color:#0f172a;border-radius:999px;padding:6px 10px;font-size:12px}
+    .footer-note{margin-top:14px;color:#64748b;font-size:12px}
+    .warning{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:8px;padding:12px}
+  </style>
+</head>
+<body class="section section--light">
+  <div class="admin-container">
+    <div class="admin-header">
+      <div class="inline">
+        <div class="badge" title="Private admin area">Admin</div>
+        <h1 class="admin-title">Tallagty Admin Panel</h1>
+      </div>
+      <div class="actions">
+        <button class="btn secondary" id="export-data">Export Data</button>
+        <button class="btn danger" id="reset-data">Reset All</button>
+      </div>
+    </div>
+
+    <div class="warning" role="alert">
+      This admin page is client-side and not protected. Do not share the link. For production, put this behind authentication on a server.
+    </div>
+
+    <div class="admin-grid">
+      <div class="card">
+        <h2>Products</h2>
+        <div class="card-body">
+          <p class="muted">Edit prices and details. Changes are saved in your browser (localStorage) and reflected on the storefront.</p>
+          <table class="table" id="products-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Description</th>
+                <th>Image</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="footer-note">Data key: tallagtyProducts</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Purchases</h2>
+        <div class="card-body">
+          <p class="muted">List of orders submitted from checkout. Stored locally as a demo.</p>
+          <table class="table" id="orders-table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Date</th>
+                <th>Buyer</th>
+                <th>Items</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="footer-note">Data key: tallagtyOrders</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    const currencyFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+    const DEFAULT_PRODUCTS = [
+      { id: 'mc1', name: 'Whole Milk (Bulk)', price: 2.50, imageUrl: 'https://picsum.photos/400/400?random=30', description: 'Fresh, pasteurized whole milk. Price per gallon.' },
+      { id: 'mc2', name: 'Heavy Cream (40%)', price: 15.00, imageUrl: 'https://picsum.photos/400/400?random=31', description: 'Rich, high-fat cream perfect for bakeries.' },
+      { id: 'mc3', name: 'Skim Milk (Bulk)', price: 2.25, imageUrl: 'https://picsum.photos/400/400?random=32', description: 'Fat-free skim milk. Price per gallon.' },
+      { id: 'ch1', name: 'Aged Cheddar Block', price: 8.50, imageUrl: 'https://picsum.photos/400/400?random=33', description: 'Sharp, nutty aged cheddar. Price per lb.' },
+      { id: 'ch2', name: 'Fresh Mozzarella Log', price: 6.75, imageUrl: 'https://picsum.photos/400/400?random=34', description: 'Soft, milky mozzarella. Perfect for pizzerias.' },
+      { id: 'ch3', name: 'Bulk Swiss Cheese', price: 7.20, imageUrl: 'https://picsum.photos/400/400?random=35', description: 'Classic holey swiss cheese, great for slicing.' },
+      { id: 'yb1', name: 'Greek Yogurt Pail', price: 25.00, imageUrl: 'https://picsum.photos/400/400?random=36', description: 'Thick and creamy plain Greek yogurt.' },
+      { id: 'yb2', name: 'Salted Butter Cases', price: 96.00, imageUrl: 'https://picsum.photos/400/400?random=37', description: 'European-style salted butter. Sold by the case.' },
+    ];
+
+    const q = (sel, root=document) => root.querySelector(sel);
+    const qa = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+    function loadProductOverrides(){
+      try{ const raw = localStorage.getItem('tallagtyProducts'); return raw ? JSON.parse(raw) : {}; }catch{ return {}; }
+    }
+    function saveProductOverrides(obj){ localStorage.setItem('tallagtyProducts', JSON.stringify(obj)); }
+
+    function getMergedProducts(){
+      const o = loadProductOverrides();
+      return DEFAULT_PRODUCTS.map(p => ({...p, ...(o[p.id]||{})}));
+    }
+
+    function renderProducts(){
+      const products = getMergedProducts();
+      const tbody = q('#products-table tbody');
+      tbody.innerHTML = '';
+      products.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><code>${p.id}</code></td>
+          <td><input class="input name" value="${p.name.replaceAll('"','&quot;')}"></td>
+          <td><input class="input price" type="number" step="0.01" value="${p.price}"></td>
+          <td><input class="input desc" value="${p.description.replaceAll('"','&quot;')}"></td>
+          <td><input class="input img" value="${p.imageUrl.replaceAll('"','&quot;')}"></td>
+          <td class="actions">
+            <button class="btn save">Save</button>
+            <button class="btn danger clear">Clear</button>
+          </td>`;
+        tbody.appendChild(tr);
+        const onSave = () => {
+          const overrides = loadProductOverrides();
+          const priceVal = parseFloat(q('.price', tr).value);
+          overrides[p.id] = {
+            name: q('.name', tr).value.trim() || p.name,
+            price: isNaN(priceVal) ? p.price : priceVal,
+            description: q('.desc', tr).value.trim() || p.description,
+            imageUrl: q('.img', tr).value.trim() || p.imageUrl,
+          };
+          saveProductOverrides(overrides);
+          alert('Saved');
+        };
+        const onClear = () => {
+          const overrides = loadProductOverrides();
+          delete overrides[p.id];
+          saveProductOverrides(overrides);
+          renderProducts();
+        };
+        q('.save', tr).addEventListener('click', onSave);
+        q('.clear', tr).addEventListener('click', onClear);
+      });
+    }
+
+    function renderOrders(){
+      let orders = [];
+      try{ orders = JSON.parse(localStorage.getItem('tallagtyOrders')) || []; }catch{ orders = []; }
+      const tbody = q('#orders-table tbody');
+      tbody.innerHTML = '';
+      if(orders.length === 0){
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="5" class="muted">No purchases yet.</td>';
+        tbody.appendChild(tr);
+        return;
+      }
+      orders.forEach(o => {
+        const tr = document.createElement('tr');
+        const itemsText = o.items.map(i => `${i.name} x${i.quantity}`).join(', ');
+        tr.innerHTML = `
+          <td>${o.id}</td>
+          <td>${new Date(o.date).toLocaleString()}</td>
+          <td>${(o.customer && (o.customer.name||o.customer.email)) || 'N/A'}</td>
+          <td>${itemsText}</td>
+          <td>${currencyFmt.format(o.total || 0)}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    q('#export-data').addEventListener('click', () => {
+      const data = {
+        products: loadProductOverrides(),
+        orders: JSON.parse(localStorage.getItem('tallagtyOrders')||'[]'),
+        cart: JSON.parse(localStorage.getItem('tallagtyCart')||'[]'),
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `tallagty-export-${Date.now()}.json`; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    q('#reset-data').addEventListener('click', () => {
+      if(!confirm('This will clear products, orders, and cart from this browser. Continue?')) return;
+      localStorage.removeItem('tallagtyProducts');
+      localStorage.removeItem('tallagtyOrders');
+      localStorage.removeItem('tallagtyCart');
+      renderProducts();
+      renderOrders();
+    });
+
+    renderProducts();
+    renderOrders();
+  })();
+  </script>
+</body>
+</html>

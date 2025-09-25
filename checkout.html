@@ -1,0 +1,163 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout - Tallagty</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    .checkout-container{max-width:1000px;margin:40px auto;padding:0 16px}
+    .checkout-grid{display:grid;grid-template-columns:1fr;gap:24px}
+    @media(min-width:920px){.checkout-grid{grid-template-columns:2fr 1fr}}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+    .card h2{font-size:18px;font-weight:600;margin:0;padding:16px;border-bottom:1px solid #f1f5f9}
+    .card-body{padding:16px}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{border-bottom:1px solid #f1f5f9;padding:8px;text-align:left}
+    .table th{font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.04em}
+    .inline{display:flex;gap:8px;align-items:center}
+    .input{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:8px}
+    .btn{display:inline-flex;align-items:center;gap:8px;background:#06b6d4;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-weight:600;cursor:pointer}
+    .muted{font-size:12px;color:#64748b}
+    .summary-row{display:flex;justify-content:space-between;margin:8px 0}
+    .summary-total{font-weight:700}
+  </style>
+</head>
+<body>
+  <header class="header">
+    <nav class="container nav">
+      <a href="index.html" class="nav__logo">
+        <svg class="nav__logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="fridgeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#22d3ee; stop-opacity:1"></stop>
+                <stop offset="100%" style="stop-color:#06b6d4; stop-opacity:1"></stop>
+              </linearGradient>
+            </defs>
+            <path d="M7 2H17C18.1046 2 19 2.89543 19 4V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V4C5 2.89543 5.89543 2 7 2Z" fill="url(#fridgeGradient)"></path>
+            <path d="M5 10H19" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round"></path>
+            <path d="M8 14V18" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+        <span>Tallagty</span>
+      </a>
+      <div class="nav__actions">
+        <a href="index.html" class="btn">Continue Shopping</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="checkout-container">
+    <div class="checkout-grid">
+      <div class="card">
+        <h2>Order Summary</h2>
+        <div class="card-body">
+          <table class="table" id="items-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Price</th>
+                <th>Qty</th>
+                <th>Line Total</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Buyer Info</h2>
+        <div class="card-body">
+          <form id="checkout-form">
+            <div style="margin-bottom:10px">
+              <label>Name</label>
+              <input class="input" name="name" required>
+            </div>
+            <div style="margin-bottom:10px">
+              <label>Email</label>
+              <input type="email" class="input" name="email" required>
+            </div>
+            <div style="margin-bottom:10px">
+              <label>Notes</label>
+              <textarea class="input" name="notes" rows="3" placeholder="Any special instructions..."></textarea>
+            </div>
+            <div class="summary-row"><span>Subtotal</span><span id="summary-subtotal">$0.00</span></div>
+            <div class="summary-row"><span>Delivery</span><span id="summary-delivery">$0.00</span></div>
+            <div class="summary-row summary-total"><span>Total</span><span id="summary-total">$0.00</span></div>
+            <button class="btn" type="submit" style="margin-top:10px">Submit Order</button>
+            <p class="muted">This is a demo checkout that stores orders in your browser.</p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-bottom"><p>&copy; 2024 Tallagty. All Rights Reserved.</p></div>
+  </footer>
+
+  <script>
+  (function(){
+    const currencyFmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+    let cart = [];
+    try { cart = JSON.parse(localStorage.getItem('tallagtyCart')) || []; } catch { cart = []; }
+
+    const tbody = document.querySelector('#items-table tbody');
+    const summarySubtotal = document.getElementById('summary-subtotal');
+    const summaryDelivery = document.getElementById('summary-delivery');
+    const summaryTotal = document.getElementById('summary-total');
+
+    function render(){
+      tbody.innerHTML = '';
+      const subtotal = cart.reduce((s,i) => s + i.price*i.quantity, 0);
+      const delivery = 0; // for B2B, could be negotiated or tiered
+      const total = subtotal + delivery;
+      cart.forEach(i => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${i.name}</td><td>${currencyFmt.format(i.price)}</td><td>${i.quantity}</td><td>${currencyFmt.format(i.price*i.quantity)}</td>`;
+        tbody.appendChild(tr);
+      });
+      summarySubtotal.textContent = currencyFmt.format(subtotal);
+      summaryDelivery.textContent = currencyFmt.format(delivery);
+      summaryTotal.textContent = currencyFmt.format(total);
+    }
+
+    function guid(){ return 'ORD-' + Math.random().toString(36).slice(2,8).toUpperCase(); }
+
+    document.getElementById('checkout-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!cart.length) { alert('Cart is empty'); return; }
+
+      const form = e.target;
+      const data = {
+        id: guid(),
+        date: Date.now(),
+        items: cart.map(({id,name,price,quantity}) => ({id,name,price,quantity})),
+        total: cart.reduce((s,i)=>s+i.price*i.quantity,0),
+        customer: {
+          name: form.name.value.trim(),
+          email: form.email.value.trim(),
+          notes: form.notes.value.trim(),
+        }
+      };
+
+      let orders = [];
+      try { orders = JSON.parse(localStorage.getItem('tallagtyOrders')) || []; } catch { orders = []; }
+      orders.push(data);
+      localStorage.setItem('tallagtyOrders', JSON.stringify(orders));
+
+      // clear cart
+      localStorage.removeItem('tallagtyCart');
+
+      alert('Order submitted! Order ID: ' + data.id);
+      window.location.href = 'index.html';
+    });
+
+    render();
+  })();
+  </script>
+</body>
+</html>
