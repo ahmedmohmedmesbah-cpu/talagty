@@ -398,3 +398,42 @@ img { max-width: 100%; height: auto; display: block; }
     .cart-sidebar { max-width: 95%; }
     .section__title { font-size: 2rem; }
 }
+
+/* ===== PRODUCT CARD BUTTON ===== */
+.product-card__btn {
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    color: white;
+    background-color: var(--primary-color);
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.product-card__btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.product-card__btn:disabled {
+    background-color: #22c55e;
+    transform: none;
+    cursor: not-allowed;
+}
+
+document.querySelectorAll('.product-card__btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        // Your logic to add product to cart
+        // Example: show a message, update cart count, etc.
+    });
+});
+
+document.querySelectorAll('.nav__cart-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelector('.cart-overlay').classList.add('active');
+        document.querySelector('.cart-sidebar').classList.add('active');
+    });
+});

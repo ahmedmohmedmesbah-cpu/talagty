@@ -470,5 +470,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial Render and price sync
     renderCart();
     syncDisplayedProductPrices();
-
+    document.querySelectorAll('.nav__cart-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelector('.cart-overlay').classList.add('active');
+            document.querySelector('.cart-sidebar').classList.add('active');
+        });
+    });
+    
+    document.querySelectorAll('.product-card__btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Your logic to add product to cart
+            // Example: show a message, update cart count, etc.
+        });
+    });
 });
