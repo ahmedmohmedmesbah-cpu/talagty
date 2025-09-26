@@ -26,10 +26,10 @@
                 <a href="index.html" class="nav__logo">
                     <svg class="nav__logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <defs>
-                          <linearGradient id="fridgeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#22d3ee; stop-opacity:1"></stop>
-                            <stop offset="100%" style="stop-color:#06b6d4; stop-opacity:1"></stop>
-                          </linearGradient>
+                            <linearGradient id="fridgeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#22d3ee; stop-opacity:1"></stop>
+                                <stop offset="100%" style="stop-color:#06b6d4; stop-opacity:1"></stop>
+                            </linearGradient>
                         </defs>
                         <path d="M7 2H17C18.1046 2 19 2.89543 19 4V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V4C5 2.89543 5.89543 2 7 2Z" fill="url(#fridgeGradient)"></path>
                         <path d="M5 10H19" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-linecap="round"></path>
@@ -131,7 +131,7 @@
                         </div>
                         <div class="widget">
                             <div class="widget__icon">
-                               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             </div>
                             <h3 class="widget__title">مورد معتمد HACCP</h3>
                             <p>نلتزم بأعلى معايير سلامة الغذاء لضمان الجودة والأمان.</p>
@@ -143,7 +143,7 @@
             <!-- Logos -->
             <section class="section">
                 <div class="container">
-                     <h2 class="section__title">موثوق من كبار تجار التجزئة</h2>
+                    <h2 class="section__title">موثوق من كبار تجار التجزئة</h2>
                     <div class="logos-grid">
                         <img src="https://picsum.photos/150/40?grayscale&random=20" alt="شعار شريك">
                         <img src="https://picsum.photos/150/40?grayscale&random=21" alt="شعار شريك">
@@ -180,7 +180,7 @@
 
         <footer class="footer">
             <div class="container footer-grid">
-                 <div class="footer-col">
+                <div class="footer-col">
                     <a href="index.html" class="nav__logo">
                         <svg class="nav__logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M7 2H17C18.1046 2 19 2.89543 19 4V20C19 21.1046 18.1046 22 17 22H7C5.89543 22 5 21.1046 5 20V4C5 2.89543 5.89543 2 7 2Z" fill="url(#fridgeGradient)"></path>
@@ -236,8 +236,65 @@
             </div>
         </div>
         <div class="cart-overlay" id="cart-overlay"></div>
+        <form id="orderForm" style="margin-top: 15px;">
+            <div class="form-group">
+                <label for="name">اسم العميل</label>
+                <input type="text" name="customer_name" required>
+            </div>
+            <div class="form-group">
+                <label for="phone">رقم الهاتف</label>
+                <input type="tel" name="customer_phone" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">تأكيد الطلب</button>
+            <p id="status" style="margin-top: 10px; font-weight: bold;"></p>
+        </form>
 
         <script src="script.js" defer></script>
-    <script type="module" src="/index.tsx"></script>
+        <script type="module" src="/index.tsx"></script>
+        <!-- ✅ Supabase + EmailJS Integration -->
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+        <script>
+            // Initialize Supabase
+            const supabaseUrl = "https://evhqnshvlblkphzhcqql.supabase.co";
+            const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHFuc2h2bGJsa3BoemhjcXFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4NDkxMzMsImV4cCI6MjA3NDQyNTEzM30.3SmewWKg9YeIGCvgwllGlpx6hP-sBro_IvcI65s3nXg";
+            const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+            // Initialize EmailJS
+            emailjs.init("Z1Yvyx9A1Sve68L2c");
+
+            // Handle Order Form Submission
+            document.getElementById("orderForm").addEventListener("submit", async function (event) {
+                event.preventDefault();
+
+                const customer_name = event.target.customer_name.value;
+                const customer_phone = event.target.customer_phone.value;
+
+                // ✅ 1. Save order to Supabase
+                const { data, error } = await supabaseClient
+                    .from("orders")
+                    .insert([{ name: customer_name, phone: customer_phone }]);
+
+                if (error) {
+                    console.error("Supabase Error:", error);
+                }
+
+                // ✅ 2. Send Email to you
+                emailjs.send("service_iclrjoi", "template_yxezw97", {
+                    customer_name,
+                    customer_phone
+                })
+                    .then(() => {
+                        document.getElementById("status").innerText = " تم إرسال الطلب بنجاح!";
+                        event.target.reset();
+                    })
+                    .catch((err) => {
+                        console.error("EmailJS Error:", err);
+                        document.getElementById("status").innerText = " تعذر إرسال الطلب.";
+                    });
+            });
+        </script>
+
+
     </body>
     </html>
