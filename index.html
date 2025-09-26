@@ -263,48 +263,7 @@
         <script src="script.js" defer></script>
         <script type="module" src="/index.tsx"></script>
         <!-- ✅ Supabase + EmailJS Integration -->
-        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-        <script>
-            // Initialize Supabase
-            const supabaseUrl = "https://evhqnshvlblkphzhcqql.supabase.co";
-            const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHFuc2h2bGJsa3BoemhjcXFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4NDkxMzMsImV4cCI6MjA3NDQyNTEzM30.3SmewWKg9YeIGCvgwllGlpx6hP-sBro_IvcI65s3nXg";
-            const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
-
-            // Initialize EmailJS
-            emailjs.init("Z1Yvyx9A1Sve68L2c");
-
-            // Handle Order Form Submission
-            document.getElementById("orderForm").addEventListener("submit", async function (event) {
-                event.preventDefault();
-
-                const customer_name = event.target.customer_name.value;
-                const customer_phone = event.target.customer_phone.value;
-
-                // ✅ 1. Save order to Supabase
-                const { data, error } = await supabaseClient
-                    .from("orders")
-                    .insert([{ name: customer_name, phone: customer_phone }]);
-
-                if (error) {
-                    console.error("Supabase Error:", error);
-                }
-
-                // ✅ 2. Send Email to you
-                emailjs.send("service_iclrjoi", "template_yxezw97", {
-                    customer_name,
-                    customer_phone
-                })
-                    .then(() => {
-                        document.getElementById("status").innerText = " تم إرسال الطلب بنجاح!";
-                        event.target.reset();
-                    })
-                    .catch((err) => {
-                        console.error("EmailJS Error:", err);
-                        document.getElementById("status").innerText = " تعذر إرسال الطلب.";
-                    });
-            });
-        </script>
+       
 
 
     </body>
