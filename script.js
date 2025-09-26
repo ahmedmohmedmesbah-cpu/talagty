@@ -174,12 +174,14 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.textContent = 'جاري إرسال الطلب...';
         statusEl.style.display = 'none';
 
+        // We pass the PRODUCTS_MAP so the email function knows the names and prices
         const orderPayload = {
             customer_name: document.getElementById('customer-name').value,
             customer_phone: document.getElementById('customer-phone').value,
             customer_address_text: document.getElementById('customer-address-text').value,
             items: cart,
-            total: cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0)
+            total: cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0),
+            productsMap: PRODUCTS_MAP // Add this line
         };
 
         try {
