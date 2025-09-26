@@ -10,6 +10,16 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'ch3', name: 'Bulk Swiss Cheese', price: 7.20, imageUrl: 'https://picsum.photos/400/400?random=35', description: 'Classic holey swiss cheese, great for slicing.' },
         { id: 'yb1', name: 'Greek Yogurt Pail', price: 25.00, imageUrl: 'https://picsum.photos/400/400?random=36', description: 'Thick and creamy plain Greek yogurt.' },
         { id: 'yb2', name: 'Salted Butter Cases', price: 96.00, imageUrl: 'https://picsum.photos/400/400?random=37', description: 'European-style salted butter. Sold by the case.' },
+
+        // === Category3: لانشون products ===
+        { id: 'ln1', name: 'لانشون بيتزا', price: 50.00, imageUrl: 'assets/لانشون بيتزا.jpg', description: 'لانشون بيتزا عالي الجودة غني بالمكونات الطبيعية.' },
+        { id: 'ln2', name: 'لانشون لحم مدخن', price: 45.00, imageUrl: 'assets/لانشون لحم مدخن.jpg', description: 'لانشون لحم مدخن غني بالنكهة المدخنة.' },
+        { id: 'ln3', name: 'لانشون كوردن بلو', price: 48.00, imageUrl: 'assets/لانشون كوردن بلو.jpg', description: 'لانشون كوردن بلو بنكهة مميزة.' },
+        { id: 'ln4', name: 'لانشون فراخ مدخن', price: 52.00, imageUrl: 'assets/لانشون فراخ مدخن.jpg', description: 'لانشون فراخ مدخن بطعم رائع.' },
+        { id: 'ln5', name: 'لانشون سجق', price: 47.00, imageUrl: 'assets/لانشون سجق.jpg', description: 'لانشون سجق بقطع السجق الشهية.' },
+        { id: 'ln6', name: 'لانشون بالفلفل الاسود', price: 46.00, imageUrl: 'assets/لانشون بالفلفل الاسود.jpg', description: 'لانشون بالفلفل الأسود الحار.' },
+        { id: 'ln7', name: 'لانشون ساده', price: 44.00, imageUrl: 'assets/لانشون ساده.jpg', description: 'لانشون سادة بدون إضافات.' },
+        { id: 'ln8', name: 'لانشون ديك رومى', price: 49.00, imageUrl: 'assets/لانشون ديك رومى.jpg', description: 'لانشون ديك رومى بطعم مميز.' }
     ];
 
     // Currency formatter
@@ -37,6 +47,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let PRODUCTS_DATA = buildProducts();
     let PRODUCTS_MAP = Object.fromEntries(PRODUCTS_DATA.map(p => [p.id, p]));
+
+// === CART & PRODUCT HELPERS ===
+
+// Fallback product lookup by slug, name, or id
+function findProduct(productIdOrSlug) {
+    let product = PRODUCTS_MAP[productIdOrSlug];
+    if (product) return product;
+    // Try to find by slug or name if not found by id
+    return PRODUCTS_DATA.find(p =>
+        p.slug === productIdOrSlug ||
+        p.name === productIdOrSlug ||
+        p.id === productIdOrSlug
+    );
+}
+
+// Generate a new cart item object from product and quantity
+function createCartItem(productIdOrSlug, quantity = 1) {
+    const product = findProduct(productIdOrSlug);
+    if (!product) return null;
+    return {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        quantity: quantity
+    };
+}
+
+// Format cart items for EmailJS payload
+function formatCartItemsForEmail(cart) {
+    return cart.map(item =>
+        `${item.name} x${item.quantity} (${item.price} ريال)`
+    ).join('\n');
+}
+
+// Calculate total price for cart
+function calculateCartTotal(cart) {
+    return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+}
 
     // --- SYNC DISPLAYED PRICES ON PRODUCT CARDS (so admin changes reflect on pages) ---
     const syncDisplayedProductPrices = () => {
@@ -194,17 +243,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cartSubtotalEl) cartSubtotalEl.textContent = currencyFmt.format(subtotal);
     };
 
-    const addToCart = (productId) => {
-        const product = PRODUCTS_MAP[productId];
+    // === [Replace addToCart function with fallback lookup] ===
+    const addToCart = (productIdOrSlug) => {
+        const product = findProduct(productIdOrSlug);
         if (!product) return;
 
-        const existingItem = cart.find(item => item.id === productId);
+        const existingItem = cart.find(item => item.id === product.id);
         if (existingItem) {
             existingItem.quantity++;
         } else {
             cart.push({ ...product, quantity: 1 });
         }
-        
         saveCart();
         renderCart();
         openCart();
@@ -336,6 +385,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input class="input" id="co-name" required />
                 </div>
                 <div class="form-group">
+                    <label for="co-phone">رقم الهاتف</label>
+                    <input class="input" id="co-phone" required />
+                </div>
+                <div class="form-group">
                     <label>عنوانك</label>
                     <div class="inline" style="margin-bottom:8px">
                         <label><input type="radio" name="addr_type" value="link" checked /> رابط خرائط جوجل</label>
@@ -409,11 +462,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const total = cart.reduce((s,i)=>s+i.price*i.quantity,0);
 
                 const record = {
-                    id: orderId,
+                    // id: orderId, // REMOVE this line
                     created_at,
                     total,
                     items,
                     customer_name: name,
+                    customer_phone: sb.querySelector('#co-phone').value.trim(),
                     customer_address_link: addrType==='link'?addrLink:null,
                     customer_address_text: addrType==='text'?addrText:null,
                 };
@@ -422,11 +476,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 try { await sendOrderToSupabase(record); dbOk = true; } catch(e){ dbOk = false; }
                 try {
                     await sendOrderEmail({
-                        order_id: orderId,
-                        name,
-                        address: addrType==='link'?addrLink:addrText,
-                        order_total: total,
-                        order_items: JSON.stringify(items)
+                        customer_name: name,
+                        customer_phone: sb.querySelector('#co-phone').value.trim(),
+                        cart_items: formatCartItemsForEmail(items),
+                        total: total
                     });
                     mailOk = true;
                 } catch(e){ mailOk = false; }
