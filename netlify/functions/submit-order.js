@@ -1,24 +1,11 @@
 // FINAL CORRECTED VERSION
 // File: /netlify/functions/submit-order.js
 
-// Helper function to format items for the email
-function formatItemsForEmail(items) {
-    if (!Array.isArray(items)) return '<p>No items in order.</p>';
-
-    let itemsList = items.map(item =>
-        `<li>${item.name || `Product ID: ${item.id}`} (Quantity: ${item.quantity})</li>`
-    ).join('');
-
-    return `<ul>${itemsList}</ul>`;
-}
-
-
 exports.handler = async function (event, context) {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    // Get credentials from Netlify environment variables
     const {
         SUPABASE_URL,
         SUPABASE_KEY,
@@ -34,12 +21,14 @@ exports.handler = async function (event, context) {
 
         // --- 1. SAVE ORDER TO SUPABASE ---
         const supabaseEndpoint = `${SUPABASE_URL}/rest/v1/orders`;
+
+        // This is the corrected data payload. It only includes columns that exist.
         const supabasePayload = {
             order_id: order_id,
             customer_name: orderData.customer_name,
             customer_phone: orderData.customer_phone,
-            customer_address_text: orderData.customer_address_text,
-            items: orderData.items, // Storing the cart items with names
+            // The line for 'customer_address_text' has been removed to prevent the crash.
+            items: orderData.items,
             total: orderData.total
         };
 
@@ -69,9 +58,6 @@ exports.handler = async function (event, context) {
                 order_id: order_id,
                 customer_name: orderData.customer_name,
                 customer_phone: orderData.customer_phone,
-                customer_address: orderData.customer_address_text,
-                items_html: formatItemsForEmail(orderData.items),
-                total: `${orderData.total.toFixed(2)} SAR`
             }
         };
 

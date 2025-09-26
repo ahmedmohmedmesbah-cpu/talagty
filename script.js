@@ -1,8 +1,6 @@
-// The complete, corrected script.js file
-
+// FINAL CORRECTED SCRIPT.JS
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- PRODUCT DATA (should be fetched from a DB in the future) ---
     const PRODUCTS_DATA = [
         { id: 'mc1', name: 'حليب كامل الدسم', price: 18.00, imageUrl: 'https://picsum.photos/400/400?random=30' },
         { id: 'mc2', name: 'قشدة طازجة', price: 22.00, imageUrl: 'https://picsum.photos/400/400?random=31' },
@@ -20,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const PRODUCTS_MAP = Object.fromEntries(PRODUCTS_DATA.map(p => [p.id, p]));
     const currencyFmt = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' });
 
-    // --- DOM ELEMENTS ---
     const cartSidebar = document.getElementById('cart-sidebar');
     const cartOverlay = document.getElementById('cart-overlay');
     const allCartToggles = document.querySelectorAll('.nav__cart-btn, #cart-toggle');
@@ -29,10 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartCountEl = document.getElementById('cart-count');
     const cartSubtotalEl = document.getElementById('cart-subtotal');
 
-    // --- APP STATE ---
     let cart = JSON.parse(localStorage.getItem('tallagtyCart')) || [];
 
-    // --- CART LOGIC ---
     const saveCart = () => localStorage.setItem('tallagtyCart', JSON.stringify(cart));
     const openSidebar = (sidebar) => {
         if (!sidebar) return;
@@ -116,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- CHECKOUT LOGIC ---
     const createCheckoutSidebar = () => {
         if (document.getElementById('checkout-sidebar')) return;
 
@@ -135,10 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="form-group">
                             <label for="customer-phone">رقم الهاتف</label>
                             <input type="tel" id="customer-phone" required placeholder="أدخل رقم الهاتف" />
-                        </div>
-                        <div class="form-group">
-                            <label for="customer-address-text">عنوان التوصيل</label>
-                            <textarea id="customer-address-text" rows="2" placeholder="اكتب عنوانك هنا"></textarea>
                         </div>
                         <div id="order-status" style="margin-top:1rem; font-weight: bold; display:none;"></div>
                         <button type="submit" class="btn btn-primary" id="submit-order-btn" style="width:100%; margin-top:1rem;">تأكيد الطلب</button>
@@ -169,7 +159,6 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.textContent = 'جاري إرسال الطلب...';
         statusEl.style.display = 'none';
 
-        // Add product names to the cart items before sending
         const itemsWithNames = cart.map(item => {
             const product = PRODUCTS_MAP[item.id];
             return {
@@ -181,8 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const orderPayload = {
             customer_name: document.getElementById('customer-name').value,
             customer_phone: document.getElementById('customer-phone').value,
-            customer_address_text: document.getElementById('customer-address-text').value,
-            items: itemsWithNames, // Send the cart with product names
+            items: itemsWithNames,
             total: cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0)
         };
 
@@ -219,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- EVENT LISTENERS ---
     document.addEventListener('click', (e) => {
         const addToCartBtn = e.target.closest('.add-to-cart-btn');
         if (addToCartBtn) {
@@ -268,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
          `;
     };
 
-    // --- INITIALIZATION ---
     setupCartFooter();
     renderCart();
     createCheckoutSidebar();
