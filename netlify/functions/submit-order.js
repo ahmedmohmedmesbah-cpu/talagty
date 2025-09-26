@@ -1,4 +1,4 @@
-// FINAL CORRECTED VERSION
+// FINAL CORRECTED VERSION - Fixes the 'order_details' error
 // File: /netlify/functions/submit-order.js
 
 exports.handler = async function (event, context) {
@@ -22,13 +22,14 @@ exports.handler = async function (event, context) {
         // --- 1. SAVE ORDER TO SUPABASE ---
         const supabaseEndpoint = `${SUPABASE_URL}/rest/v1/orders`;
 
-        // This is the corrected data payload. It only includes columns that exist.
+        // This is the corrected data payload.
+        // It now includes the 'order_details' column to match your database.
         const supabasePayload = {
             order_id: order_id,
             customer_name: orderData.customer_name,
             customer_phone: orderData.customer_phone,
-            // The line for 'customer_address_text' has been removed to prevent the crash.
             items: orderData.items,
+            order_details: orderData.items, // Sending the items as the details
             total: orderData.total
         };
 
