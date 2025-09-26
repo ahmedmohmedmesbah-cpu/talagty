@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'ch3', name: 'Bulk Swiss Cheese', price: 7.20, imageUrl: 'https://picsum.photos/400/400?random=35', description: 'Classic holey swiss cheese, great for slicing.' },
         { id: 'yb1', name: 'Greek Yogurt Pail', price: 25.00, imageUrl: 'https://picsum.photos/400/400?random=36', description: 'Thick and creamy plain Greek yogurt.' },
         { id: 'yb2', name: 'Salted Butter Cases', price: 96.00, imageUrl: 'https://picsum.photos/400/400?random=37', description: 'European-style salted butter. Sold by the case.' },
-
         // === Category3: لانشون products ===
         { id: 'ln1', name: 'لانشون بيتزا', price: 50.00, imageUrl: 'assets/لانشون بيتزا.jpg', description: 'لانشون بيتزا عالي الجودة غني بالمكونات الطبيعية.' },
         { id: 'ln2', name: 'لانشون لحم مدخن', price: 45.00, imageUrl: 'assets/لانشون لحم مدخن.jpg', description: 'لانشون لحم مدخن غني بالنكهة المدخنة.' },
@@ -31,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const raw = localStorage.getItem('tallagtyProducts');
             if (!raw) return {};
             const parsed = JSON.parse(raw);
-            // Ensure valid object structure { [id]: { price?: number, name?: string, imageUrl?: string, description?: string } }
             return parsed && typeof parsed === 'object' ? parsed : {};
         } catch (e) {
             console.warn('Failed to parse tallagtyProducts from localStorage:', e);
@@ -48,46 +46,41 @@ document.addEventListener('DOMContentLoaded', () => {
     let PRODUCTS_DATA = buildProducts();
     let PRODUCTS_MAP = Object.fromEntries(PRODUCTS_DATA.map(p => [p.id, p]));
 
-// === CART & PRODUCT HELPERS ===
+    // === CART & PRODUCT HELPERS ===
+    function findProduct(productIdOrSlug) {
+        let product = PRODUCTS_MAP[productIdOrSlug];
+        if (product) return product;
+        return PRODUCTS_DATA.find(p =>
+            p.slug === productIdOrSlug ||
+            p.name === productIdOrSlug ||
+            p.id === productIdOrSlug
+        );
+    }
 
-// Fallback product lookup by slug, name, or id
-function findProduct(productIdOrSlug) {
-    let product = PRODUCTS_MAP[productIdOrSlug];
-    if (product) return product;
-    // Try to find by slug or name if not found by id
-    return PRODUCTS_DATA.find(p =>
-        p.slug === productIdOrSlug ||
-        p.name === productIdOrSlug ||
-        p.id === productIdOrSlug
-    );
-}
+    // ✅ Fix: use imageUrl for cart item image
+    function createCartItem(productIdOrSlug, quantity = 1) {
+        const product = findProduct(productIdOrSlug);
+        if (!product) return null;
+        return {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            imageUrl: product.imageUrl, // fixed
+            quantity: quantity
+        };
+    }
 
-// Generate a new cart item object from product and quantity
-function createCartItem(productIdOrSlug, quantity = 1) {
-    const product = findProduct(productIdOrSlug);
-    if (!product) return null;
-    return {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        quantity: quantity
-    };
-}
+    function formatCartItemsForEmail(cart) {
+        return cart.map(item =>
+            `${item.name} x${item.quantity} (${item.price} ريال)`
+        ).join('\n');
+    }
 
-// Format cart items for EmailJS payload
-function formatCartItemsForEmail(cart) {
-    return cart.map(item =>
-        `${item.name} x${item.quantity} (${item.price} ريال)`
-    ).join('\n');
-}
+    function calculateCartTotal(cart) {
+        return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    }
 
-// Calculate total price for cart
-function calculateCartTotal(cart) {
-    return cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-}
-
-    // --- SYNC DISPLAYED PRICES ON PRODUCT CARDS (so admin changes reflect on pages) ---
+    // --- SYNC DISPLAYED PRICES ON PRODUCT CARDS ---
     const syncDisplayedProductPrices = () => {
         document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
             const productId = btn.dataset.productId;
@@ -107,7 +100,6 @@ function calculateCartTotal(cart) {
         navToggle.addEventListener('click', () => {
             navMenu.classList.toggle('active');
         });
-        // Close menu when a link is clicked
         navMenu.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
                 navMenu.classList.remove('active');
@@ -252,7 +244,8 @@ function calculateCartTotal(cart) {
         if (existingItem) {
             existingItem.quantity++;
         } else {
-            cart.push({ ...product, quantity: 1 });
+            // Use createCartItem to ensure imageUrl is set
+            cart.push({ ...createCartItem(product.id), quantity: 1 });
         }
         saveCart();
         renderCart();
@@ -290,7 +283,6 @@ function calculateCartTotal(cart) {
             const productId = addToCartBtn.dataset.productId;
             if (productId) {
                 addToCart(productId);
-                // Visual feedback (Arabic)
                 addToCartBtn.textContent = 'تمت الاضافه';
                 addToCartBtn.disabled = true;
                 setTimeout(() => {
@@ -313,198 +305,73 @@ function calculateCartTotal(cart) {
                 updateQuantity(productId, itemInCart.quantity - 1);
             }
             if (e.target.closest('.cart-item__remove')) {
-                updateQuantity(productId, 0); // remove item
+                updateQuantity(productId, 0);
             }
         }
     });
 
-    // Wire Proceed to Checkout button in cart sidebar (if present)
-    // --- CHECKOUT SIDEBAR (Arabic) ---
-    function getSupabaseConfig(){
-        const url = (localStorage.getItem('tallagtySupabaseUrl')||'').trim() || 'https://evhqnshvlblkphzhcqql.supabase.co';
-        const key = (localStorage.getItem('tallagtySupabaseAnonKey')||'').trim() || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHFuc2h2bGJsa3BoemhjcXFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4NDkxMzMsImV4cCI6MjA3NDQyNTEzM30.3SmewWKg9YeIGCvgwllGlpx6hP-sBro_IvcI65s3nXg';
-        const table = (localStorage.getItem('tallagtySupabaseTable')||'orders').trim();
-        return { url, key, table };
-    }
-    function isSupabaseConfigured(){
-        const {url, key, table} = getSupabaseConfig();
-        return !!(url && key && table);
-    }
-    async function sendOrderToSupabase(record){
-        const {url, key, table} = getSupabaseConfig();
-        const resp = await fetch(`${url}/rest/v1/${table}`, {
-            method: 'POST',
-            headers: {
-                apikey: key,
-                Authorization: `Bearer ${key}`,
-                'Content-Type': 'application/json',
-                Prefer: 'return=representation'
-            },
-            body: JSON.stringify(record)
-        });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        return resp.json();
-    }
-    function loadEmailJS(){
-        return new Promise((resolve, reject) => {
-            if (window.emailjs){
-                try { window.emailjs.init('Z1Yvyx9A1Sve68L2c'); resolve(); } catch(e){ resolve(); }
+    // --- CHECKOUT SYSTEM ---
+    // Ensure checkout sidebar is created early
+    ensureCheckoutSidebar();
+
+    // Hook order form submit (for #orderForm)
+    document.addEventListener('submit', async function(e) {
+        const form = e.target;
+        if (form.id === 'orderForm') {
+            e.preventDefault();
+
+            if (!cart || cart.length === 0) {
+                alert('سلة التسوق فارغة.');
                 return;
             }
-            const s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js';
-            s.onload = () => { try { window.emailjs.init('Z1Yvyx9A1Sve68L2c'); resolve(); } catch(e){ resolve(); } };
-            s.onerror = () => reject(new Error('Failed to load EmailJS'));
-            document.head.appendChild(s);
-        });
-    }
-    async function sendOrderEmail(params){
-        await loadEmailJS();
-        try {
-            const res = await window.emailjs.send('service_iclrjoi','template_yxezw97', params);
-            return res;
-        } catch(e){ throw e; }
-    }
 
-    function ensureCheckoutSidebar(){
-        if (document.getElementById('checkout-sidebar')) return;
-        const overlay = document.createElement('div');
-        overlay.id = 'checkout-overlay';
-        overlay.className = 'cart-overlay';
-        const sidebar = document.createElement('div');
-        sidebar.id = 'checkout-sidebar';
-        sidebar.className = 'cart-sidebar';
-        sidebar.innerHTML = `
-            <div class="cart-sidebar__header">
-                <h2>إتمام الشراء</h2>
-                <button class="cart-sidebar__close" id="checkout-close" aria-label="إغلاق">&times;</button>
-            </div>
-            <div class="cart-sidebar__body">
-                <div class="form-group">
-                    <label for="co-name">أسمك</label>
-                    <input class="input" id="co-name" required />
-                </div>
-                <div class="form-group">
-                    <label for="co-phone">رقم الهاتف</label>
-                    <input class="input" id="co-phone" required />
-                </div>
-                <div class="form-group">
-                    <label>عنوانك</label>
-                    <div class="inline" style="margin-bottom:8px">
-                        <label><input type="radio" name="addr_type" value="link" checked /> رابط خرائط جوجل</label>
-                        <label><input type="radio" name="addr_type" value="text" /> وصف نصي</label>
-                    </div>
-                    <input class="input" id="co-address-link" placeholder="https://maps.google.com/..." />
-                    <textarea class="input" id="co-address-text" rows="3" placeholder="وصف العنوان بالتفصيل" style="display:none;margin-top:8px"></textarea>
-                </div>
-                <div class="cart-sidebar__subtotal">
-                    <span>المجموع</span>
-                    <span id="co-subtotal">$0.00</span>
-                </div>
-                <div class="warning" id="co-msg" style="display:none"></div>
-            </div>
-            <div class="cart-sidebar__footer">
-                <button class="btn btn-primary" id="co-submit" type="button">إرسال الطلب</button>
-            </div>
-        `;
-        document.body.appendChild(overlay);
-        document.body.appendChild(sidebar);
-        // Events
-        overlay.addEventListener('click', closeCheckoutSidebar);
-        const closeBtn = sidebar.querySelector('#checkout-close');
-        if (closeBtn) closeBtn.addEventListener('click', closeCheckoutSidebar);
-        // Toggle address inputs
-        sidebar.addEventListener('change', (e) => {
-            if (e.target && e.target.name === 'addr_type'){
-                const v = e.target.value;
-                const linkEl = sidebar.querySelector('#co-address-link');
-                const textEl = sidebar.querySelector('#co-address-text');
-                if (v === 'link'){ linkEl.style.display = ''; textEl.style.display = 'none'; }
-                else { linkEl.style.display = 'none'; textEl.style.display = ''; }
+            const name = form.querySelector('input[name="customer_name"]').value.trim();
+            const phone = form.querySelector('input[name="customer_phone"]').value.trim();
+
+            if (!name || !phone) {
+                alert('الرجاء إدخال الاسم ورقم الهاتف.');
+                return;
             }
-        });
-    }
-    function openCheckoutSidebar(){
-        ensureCheckoutSidebar();
-        // Close cart if open to avoid overlap
-        closeCart();
-        const ov = document.getElementById('checkout-overlay');
-        const sb = document.getElementById('checkout-sidebar');
-        if (!ov || !sb) return;
-        // update subtotal
-        const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        const formatter = new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'USD' });
-        const subtotalEl = sb.querySelector('#co-subtotal');
-        if (subtotalEl) subtotalEl.textContent = formatter.format(subtotal);
-        ov.classList.add('active');
-        sb.classList.add('active');
-        const msgEl = sb.querySelector('#co-msg');
-        if (msgEl) { msgEl.style.display='none'; msgEl.textContent=''; }
-        const submitBtn = sb.querySelector('#co-submit');
-        if (submitBtn && !submitBtn._wired){
-            submitBtn._wired = true;
-            submitBtn.addEventListener('click', async () => {
-                if (!cart || cart.length === 0){ alert('سلة التسوق فارغة.'); return; }
-                const name = sb.querySelector('#co-name').value.trim();
-                const addrType = sb.querySelector('input[name="addr_type"]:checked').value;
-                const addrLink = sb.querySelector('#co-address-link').value.trim();
-                const addrText = sb.querySelector('#co-address-text').value.trim();
-                if (!name){ alert('يرجى إدخال الاسم'); return; }
-                if (addrType === 'link' && !addrLink){ alert('يرجى إدخال رابط خرائط جوجل'); return; }
-                if (addrType === 'text' && !addrText){ alert('يرجى وصف العنوان'); return; }
 
-                submitBtn.disabled = true;
-                submitBtn.textContent = '... جارٍ الإرسال';
+            const orderRecord = {
+                customer_name: name,
+                customer_phone: phone,
+                items: cart,
+                total: calculateCartTotal(cart)
+            };
 
-                const orderId = 'ORD-' + Math.random().toString(36).slice(2,8).toUpperCase();
-                const created_at = new Date().toISOString();
-                const items = cart.map(({id,name,price,quantity}) => ({id,name,price,quantity}));
-                const total = cart.reduce((s,i)=>s+i.price*i.quantity,0);
-
-                const record = {
-                    // id: orderId, // REMOVE this line
-                    created_at,
-                    total,
-                    items,
-                    customer_name: name,
-                    customer_phone: sb.querySelector('#co-phone').value.trim(),
-                    customer_address_link: addrType==='link'?addrLink:null,
-                    customer_address_text: addrType==='text'?addrText:null,
-                };
-
-                let dbOk = false, mailOk = false;
-                try { await sendOrderToSupabase(record); dbOk = true; } catch(e){ dbOk = false; }
-                try {
-                    await sendOrderEmail({
-                        customer_name: name,
-                        customer_phone: sb.querySelector('#co-phone').value.trim(),
-                        cart_items: formatCartItemsForEmail(items),
-                        total: total
-                    });
-                    mailOk = true;
-                } catch(e){ mailOk = false; }
-
-                if (dbOk && mailOk){
-                    alert('تم إرسال الطلب بنجاح!');
-                    // clear cart and close
-                    cart = [];
-                    saveCart();
-                    renderCart();
-                    closeCheckoutSidebar();
-                } else {
-                    alert('تعذر إرسال الطلب.');
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'إرسال الطلب';
+            try {
+                if (isSupabaseConfigured()) {
+                    await sendOrderToSupabase(orderRecord);
                 }
-            });
+                await sendOrderEmail({
+                    customer_name: name,
+                    customer_phone: phone,
+                    order_details: formatCartItems(cart),
+                    total: calculateCartTotal(cart) + " ريال"
+                });
+
+                loadJsPDF(() => {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    doc.text(`فاتورة الطلب\n\n${formatCartItems(cart)}\n\nالإجمالي: ${calculateCartTotal(cart)} ريال`, 10, 10);
+                    doc.save("فاتورة.pdf");
+                });
+
+                alert('تم إرسال الطلب بنجاح!');
+                cart = [];
+                saveCart();
+                renderCart();
+                closeCart();
+
+            } catch (err) {
+                console.error(err);
+                alert('حدث خطأ أثناء إرسال الطلب. حاول مرة أخرى.');
+            }
         }
-    }
-    function closeCheckoutSidebar(){
-        const ov = document.getElementById('checkout-overlay');
-        const sb = document.getElementById('checkout-sidebar');
-        if (ov) ov.classList.remove('active');
-        if (sb) sb.classList.remove('active');
-    }
+    });
+
+    // --- ensureCheckoutSidebar (already implemented above) ---
 
     // Hook the existing cart checkout button
     const checkoutBtn = document.querySelector('.cart-sidebar__footer .btn.btn-primary');
@@ -533,7 +400,6 @@ function calculateCartTotal(cart) {
     document.querySelectorAll('.product-card__btn').forEach(btn => {
         btn.addEventListener('click', function() {
             // Your logic to add product to cart
-            // Example: show a message, update cart count, etc.
         });
     });
 });
@@ -542,151 +408,19 @@ function calculateCartTotal(cart) {
 
 // jsPDF loader (only loads if needed)
 function loadJsPDF(callback) {
-  if (window.jspdf) return callback();
-  var script = document.createElement('script');
-  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-  script.onload = callback;
-  document.body.appendChild(script);
+    if (window.jspdf) return callback();
+    var script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    script.onload = callback;
+    document.body.appendChild(script);
 }
 
 // Helper: Format items for EmailJS and PDF
 function formatCartItems(cart) {
-  return cart.map(item => `${item.name} × ${item.quantity} = ${item.price * item.quantity} ريال`).join('\n');
+    return cart.map(item => `${item.name} × ${item.quantity} = ${item.price * item.quantity} ريال`).join('\n');
 }
 
-// Checkout form handler
-document.getElementById('checkout-form').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const statusEl = document.getElementById('order-status');
-  statusEl.style.display = 'none';
-  statusEl.style.color = 'red';
-
-  // Collect form data
-  const name = document.getElementById('customer-name').value.trim();
-  const phone = document.getElementById('customer-phone').value.trim();
-  const addressText = document.getElementById('customer-address-text').value.trim();
-  const addressLink = document.getElementById('customer-address-link').value.trim();
-
-  // Collect cart data
-  let cart = [];
-  try { cart = JSON.parse(localStorage.getItem('tallagtyCart')) || []; } catch {}
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-  // Validate
-  if (!name || !phone) {
-    statusEl.textContent = 'يرجى إدخال الاسم ورقم الهاتف';
-    statusEl.style.display = 'block';
-    return;
-  }
-  if (cart.length === 0) {
-    statusEl.textContent = 'سلة التسوق فارغة';
-    statusEl.style.display = 'block';
-    return;
-  }
-
-  // Disable button, show loading
-  const btn = document.getElementById('submit-order-btn');
-  btn.disabled = true;
-  btn.textContent = '... جارٍ الإرسال';
-
-  // Prepare order object
-  const order = {
-    customer_name: name,
-    customer_phone: phone,
-    customer_address_text: addressText,
-    customer_address_link: addressLink,
-    items: cart,
-    total: total
-  };
-
-  // Supabase config
-  const SUPABASE_URL = 'https://evhqnshvlblkphzhcqql.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHFuc2h2bGJsa3BoemhjcXFsIiwicm9zZSI6ImFub24iLCJpYXQiOjE3NTg4NDkxMzMsImV4cCI6MjA3NDQyNTEzM30.3SmewWKg9YeIGCvgwllGlpx6hP-sBro_IvcI65s3nXg';
-  const SUPABASE_TABLE = 'orders';
-
-  let supabaseOk = false;
-  let orderId = null;
-
-  // Send to Supabase
-  try {
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation'
-      },
-      body: JSON.stringify({
-        customer_name: order.customer_name,
-        customer_phone: order.customer_phone,
-        customer_address_text: order.customer_address_text,
-        customer_address_link: order.customer_address_link,
-        items: JSON.stringify(order.items),
-        total: order.total
-      })
-    });
-    if (resp.ok) {
-      const data = await resp.json();
-      supabaseOk = true;
-      orderId = data[0]?.id || null;
-    }
-  } catch (err) {
-    supabaseOk = false;
-  }
-
-  // Fallback: store in localStorage if Supabase fails
-  if (!supabaseOk) {
-    let fallbackOrders = [];
-    try { fallbackOrders = JSON.parse(localStorage.getItem('fallbackOrders')) || []; } catch {}
-    fallbackOrders.push({ ...order, created_at: new Date().toISOString() });
-    localStorage.setItem('fallbackOrders', JSON.stringify(fallbackOrders));
-  }
-
-  // Send EmailJS notification
-  try {
-    await loadJsPDF(() => {});
-    await emailjs.send('service_iclrjoi', 'template_yxezw97', {
-      customer_name: name,
-      customer_phone: phone,
-      cart_items: formatCartItems(cart),
-      total: total
-    }, 'Z1Yvyx9A1Sve68L2c');
-  } catch (err) {
-    // Ignore email failure for user
-  }
-
-  // PDF receipt
-  loadJsPDF(() => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFont('helvetica');
-    doc.setFontSize(16);
-    doc.text('فاتورة الطلب', 105, 20, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text(`التاريخ: ${new Date().toLocaleString('ar-EG')}`, 20, 35);
-    doc.text(`اسم العميل: ${name}`, 20, 45);
-    doc.text(`رقم الهاتف: ${phone}`, 20, 55);
-    doc.text(`العنوان: ${addressText || addressLink}`, 20, 65);
-    doc.text('المحتويات:', 20, 75);
-    let y = 85;
-    cart.forEach(item => {
-      doc.text(`${item.name} × ${item.quantity} = ${item.price * item.quantity} ريال`, 20, y);
-      y += 10;
-    });
-    doc.text(`المجموع: ${total} ريال`, 20, y + 10);
-    doc.save('order_receipt.pdf');
-  });
-
-  // Success message, clear cart
-  statusEl.style.color = 'green';
-  statusEl.textContent = 'تم إرسال الطلب بنجاح! سيتم تحميل الفاتورة.';
-  statusEl.style.display = 'block';
-  btn.disabled = false;
-  btn.textContent = 'تأكيد الطلب';
-  localStorage.setItem('tallagtyCart', '[]');
-  setTimeout(() => {
-    statusEl.style.display = 'none';
-    btn.textContent = 'تأكيد الطلب';
-  }, 4000);
-});
+// --- REMOVE OLD CHECKOUT HANDLER ---
+// document.getElementById('checkout-form')?.addEventListener('submit', async function(e) {
+//   // ... old logic ...
+// });
