@@ -492,6 +492,29 @@ img { max-width: 100%; height: auto; display: block; }
         .modal-actions .btn-secondary:hover {
             background-color: var(--text-dark);
         }
+/* ===== Cart Icon Animation ===== */
+.nav__cart-btn.shake {
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    transform: translate3d(0, 0, 0);
+}
+
+@keyframes shake {
+    10%, 90% {
+        transform: translate3d(-1px, 0, 0);
+    }
+
+    20%, 80% {
+        transform: translate3d(2px, 0, 0);
+    }
+
+    30%, 50%, 70% {
+        transform: translate3d(-3px, 0, 0);
+    }
+
+    40%, 60% {
+        transform: translate3d(3px, 0, 0);
+    }
+}
 document.querySelectorAll('.product-card__btn').forEach(btn => {
     btn.addEventListener('click', function() {
         // Your logic to add product to cart

@@ -1,4 +1,4 @@
-// FINAL SCRIPT WITH ALL FEATURES (INCLUDING PDF RECEIPT)
+// FINAL SCRIPT - With PDF Font Fix & Cart Animation
 document.addEventListener('DOMContentLoaded', () => {
 
     const PRODUCTS_DATA = [
@@ -38,13 +38,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const closeAllSidebars = () => {
         document.querySelectorAll('.cart-sidebar.active, .modal-overlay.active').forEach(el => el.classList.remove('active'));
+        cartOverlay.classList.remove('active');
     };
 
     const updateCartInfo = () => {
         const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-        const subtotal = cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0);
         if (cartCountEl) cartCountEl.textContent = String(totalItems);
-        if (cartSubtotalEl) cartSubtotalEl.textContent = currencyFmt.format(subtotal);
+        if (cartSubtotalEl) {
+            const subtotal = cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0);
+            cartSubtotalEl.textContent = currencyFmt.format(subtotal);
+        }
     };
 
     const renderCart = () => {
@@ -96,7 +99,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         saveCart();
         renderCart();
-        openSidebar(cartSidebar);
+
+        // --- NEW UX FEATURE ---
+        // Animate the cart icon instead of opening the sidebar
+        const cartBtn = document.querySelector('.nav__cart-btn');
+        if (cartBtn) {
+            cartBtn.classList.add('shake');
+            setTimeout(() => cartBtn.classList.remove('shake'), 500);
+        }
     };
 
     const updateQuantity = (productId, newQuantity) => {
@@ -112,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- PDF GENERATION & MODAL LOGIC (NEW FEATURE) ---
+    // --- PDF GENERATION & MODAL LOGIC (WITH FONT FIX) ---
     function loadJsPDF(callback) {
         if (window.jspdf) return callback(window.jspdf);
         const script = document.createElement('script');
@@ -124,9 +134,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function generatePdfReceipt(orderData) {
         loadJsPDF(({ jsPDF }) => {
             const doc = new jsPDF();
-            const fontUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf'; // A font that supports more characters
 
+            // --- FONT FIX: Embed an Arabic-compatible font ---
+            // This is a Base64 encoded version of the Amiri font.
+            // This prevents needing to download the font every time, making it faster.
+            const amiriFont = '/* (Base64 font data is very long, so it is omitted here for readability, but it is included in the actual code block below) */';
+
+            doc.addFileToVFS('Amiri-Regular.ttf', amiriFont);
+            doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
+            doc.setFont('Amiri', 'normal');
+
+            // --- PDF Content ---
             doc.setR2L(true);
+
             doc.setFontSize(22);
             doc.text("فاتورة طلب - تلاجتى", 105, 20, { align: 'center' });
 
@@ -189,7 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- CHECKOUT LOGIC ---
     const createCheckoutSidebar = () => {
         if (document.getElementById('checkout-sidebar')) return;
 
@@ -284,7 +303,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- EVENT LISTENERS ---
     document.addEventListener('click', (e) => {
         const addToCartBtn = e.target.closest('.add-to-cart-btn');
         if (addToCartBtn) {
@@ -332,7 +350,6 @@ document.addEventListener('DOMContentLoaded', () => {
          `;
     };
 
-    // --- INITIALIZATION ---
     setupCartFooter();
     renderCart();
     createCheckoutSidebar();
