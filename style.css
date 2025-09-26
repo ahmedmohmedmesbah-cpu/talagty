@@ -423,7 +423,75 @@ img { max-width: 100%; height: auto; display: block; }
     transform: none;
     cursor: not-allowed;
 }
+/* ===== PDF DOWNLOAD MODAL ===== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 200; /* Higher than the cart overlay */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
+    .modal-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+.modal {
+    background: white;
+    padding: 2.5rem;
+    border-radius: var(--radius-md);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal {
+    transform: scale(1);
+}
+
+.modal h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--text-dark);
+}
+
+.modal p {
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+    /* Make the download button the primary action */
+    .modal-actions .btn-primary {
+        background-color: #22c55e; /* Green for success */
+    }
+
+        .modal-actions .btn-primary:hover {
+            background-color: #16a34a;
+        }
+
+    /* A secondary button for closing */
+    .modal-actions .btn-secondary {
+        background-color: var(--text-muted);
+        color: white;
+    }
+
+        .modal-actions .btn-secondary:hover {
+            background-color: var(--text-dark);
+        }
 document.querySelectorAll('.product-card__btn').forEach(btn => {
     btn.addEventListener('click', function() {
         // Your logic to add product to cart

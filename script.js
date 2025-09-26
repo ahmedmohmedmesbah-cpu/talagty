@@ -1,7 +1,6 @@
-// FINAL CORRECTED SCRIPT.JS
+// FINAL SCRIPT WITH ALL FEATURES (INCLUDING PDF RECEIPT)
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- PRODUCT DATA (should be fetched from a DB in the future) ---
     const PRODUCTS_DATA = [
         { id: 'mc1', name: 'حليب كامل الدسم', price: 18.00, imageUrl: 'https://picsum.photos/400/400?random=30' },
         { id: 'mc2', name: 'قشدة طازجة', price: 22.00, imageUrl: 'https://picsum.photos/400/400?random=31' },
@@ -19,7 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const PRODUCTS_MAP = Object.fromEntries(PRODUCTS_DATA.map(p => [p.id, p]));
     const currencyFmt = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' });
 
-    // --- DOM ELEMENTS ---
     const cartSidebar = document.getElementById('cart-sidebar');
     const cartOverlay = document.getElementById('cart-overlay');
     const allCartToggles = document.querySelectorAll('.nav__cart-btn, #cart-toggle');
@@ -28,19 +26,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartCountEl = document.getElementById('cart-count');
     const cartSubtotalEl = document.getElementById('cart-subtotal');
 
-    // --- APP STATE ---
     let cart = JSON.parse(localStorage.getItem('tallagtyCart')) || [];
 
-    // --- CART LOGIC ---
     const saveCart = () => localStorage.setItem('tallagtyCart', JSON.stringify(cart));
+
     const openSidebar = (sidebar) => {
         if (!sidebar) return;
         sidebar.classList.add('active');
         cartOverlay.classList.add('active');
     };
+
     const closeAllSidebars = () => {
-        document.querySelectorAll('.cart-sidebar.active').forEach(sb => sb.classList.remove('active'));
-        cartOverlay.classList.remove('active');
+        document.querySelectorAll('.cart-sidebar.active, .modal-overlay.active').forEach(el => el.classList.remove('active'));
     };
 
     const updateCartInfo = () => {
@@ -115,6 +112,83 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- PDF GENERATION & MODAL LOGIC (NEW FEATURE) ---
+    function loadJsPDF(callback) {
+        if (window.jspdf) return callback(window.jspdf);
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.onload = () => callback(window.jspdf);
+        document.head.appendChild(script);
+    }
+
+    function generatePdfReceipt(orderData) {
+        loadJsPDF(({ jsPDF }) => {
+            const doc = new jsPDF();
+            const fontUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf'; // A font that supports more characters
+
+            doc.setR2L(true);
+            doc.setFontSize(22);
+            doc.text("فاتورة طلب - تلاجتى", 105, 20, { align: 'center' });
+
+            doc.setFontSize(12);
+            doc.text(`رقم الطلب: ${orderData.order_id}`, 190, 40, { align: 'right' });
+            doc.text(`اسم العميل: ${orderData.customer_name}`, 190, 50, { align: 'right' });
+            doc.text(`رقم الهاتف: ${orderData.customer_phone}`, 190, 60, { align: 'right' });
+            doc.text(`تاريخ الطلب: ${new Date().toLocaleString('ar-EG')}`, 190, 70, { align: 'right' });
+
+            doc.line(20, 80, 190, 80);
+
+            let y = 90;
+            orderData.items.forEach(item => {
+                const product = PRODUCTS_MAP[item.id];
+                const lineText = `${(product.price * item.quantity).toFixed(2)} SAR  -  (الكمية: ${item.quantity})  ${product.name}`;
+                doc.text(lineText, 190, y, { align: 'right' });
+                y += 10;
+            });
+
+            doc.line(20, y, 190, y);
+
+            doc.setFontSize(16);
+            const totalText = `الإجمالي: ${currencyFmt.format(orderData.total)}`;
+            doc.text(totalText, 190, y + 15, { align: 'right' });
+
+            doc.save(`receipt-${orderData.order_id}.pdf`);
+        });
+    }
+
+    function showDownloadModal(orderData) {
+        if (!document.getElementById('receipt-modal')) {
+            const modalHTML = `
+                <div class="modal-overlay" id="receipt-modal-overlay">
+                    <div class="modal">
+                        <h2>تم تأكيد طلبك بنجاح!</h2>
+                        <p>هل ترغب في تحميل نسخة من الفاتورة بصيغة PDF؟</p>
+                        <div class="modal-actions">
+                            <button id="download-pdf-btn" class="btn btn-primary">نعم، تحميل الفاتورة</button>
+                            <button id="close-modal-btn" class="btn btn-secondary">لا، شكراً</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        const modalOverlay = document.getElementById('receipt-modal-overlay');
+        const downloadBtn = document.getElementById('download-pdf-btn');
+        const closeBtn = document.getElementById('close-modal-btn');
+
+        modalOverlay.classList.add('active');
+
+        downloadBtn.onclick = () => {
+            generatePdfReceipt(orderData);
+            modalOverlay.classList.remove('active');
+        };
+
+        closeBtn.onclick = () => {
+            modalOverlay.classList.remove('active');
+        };
+    }
+
     // --- CHECKOUT LOGIC ---
     const createCheckoutSidebar = () => {
         if (document.getElementById('checkout-sidebar')) return;
@@ -168,22 +242,16 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.textContent = 'جاري إرسال الطلب...';
         statusEl.style.display = 'none';
 
-        // Add product names to the cart items before sending
-        const itemsWithData = cart.map(item => {
-            const product = PRODUCTS_MAP[item.id];
-            return {
-                id: item.id,
-                quantity: item.quantity,
-                name: product ? product.name : 'Unknown Item' // Add the name here
-            };
-        });
+        const itemsWithData = cart.map(item => ({ ...item, name: PRODUCTS_MAP[item.id]?.name || 'Unknown' }));
+        const orderTotal = cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0);
 
         const orderPayload = {
             customer_name: document.getElementById('customer-name').value,
             customer_phone: document.getElementById('customer-phone').value,
             customer_address_text: document.getElementById('customer-address-text').value,
-            items: itemsWithData, // Send the cart with product names
-            total: cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0)
+            items: itemsWithData,
+            total: orderTotal,
+            order_details: itemsWithData
         };
 
         try {
@@ -192,21 +260,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(orderPayload)
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to submit order');
-            }
+            if (!response.ok) { throw new Error('Failed to submit order'); }
 
-            statusEl.textContent = 'تم إرسال طلبك بنجاح!';
-            statusEl.style.color = 'green';
-            statusEl.style.display = 'block';
+            const result = await response.json();
+            orderPayload.order_id = result.order_id;
 
             cart = [];
             saveCart();
             renderCart();
-            setTimeout(() => {
-                closeAllSidebars();
-                document.getElementById('order-form').reset();
-            }, 2500);
+            closeAllSidebars();
+            document.getElementById('order-form').reset();
+
+            showDownloadModal(orderPayload);
 
         } catch (error) {
             console.error('Order submission error:', error);
@@ -250,7 +315,6 @@ document.addEventListener('DOMContentLoaded', () => {
     allCartToggles.forEach(btn => btn.addEventListener('click', () => openSidebar(cartSidebar)));
     if (cartCloseBtn) cartCloseBtn.addEventListener('click', closeAllSidebars);
     if (cartOverlay) cartOverlay.addEventListener('click', closeAllSidebars);
-
 
     const setupCartFooter = () => {
         const footer = cartSidebar.querySelector('.cart-sidebar__footer');
