@@ -220,7 +220,7 @@
             </div>
         </footer>
 
-        <!-- Cart Sidebar -->
+        <!-- === BEGIN CART SIDEBAR (copy and replace in every HTML file) === -->
         <div class="cart-sidebar" id="cart-sidebar">
             <div class="cart-sidebar__header">
                 <h2>سلة مشترياتك</h2>
@@ -232,69 +232,80 @@
                     <span>الإجمالي</span>
                     <span id="cart-subtotal">$0.00</span>
                 </div>
-
-                <!-- ✅ Order Form goes here -->
-                <form id="orderForm" style="margin-top: 15px;">
+                <!-- === Checkout Form: Paste below subtotal, before closing div === -->
+                <form id="checkout-form" style="margin-top:1rem;">
                     <div class="form-group">
-                        <label for="name">اسم العميل</label>
-                        <input type="text" name="customer_name" required>
+                        <label for="customer-name">اسم العميل</label>
+                        <input type="text" id="customer-name" required placeholder="أدخل اسمك" />
                     </div>
                     <div class="form-group">
-                        <label for="phone">رقم الهاتف</label>
-                        <input type="tel" name="customer_phone" required>
+                        <label for="customer-phone">رقم الهاتف</label>
+                        <input type="tel" id="customer-phone" required placeholder="أدخل رقم الهاتف" />
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">تأكيد الطلب</button>
-                    <p id="status" style="margin-top: 10px; font-weight: bold;"></p>
+                    <div class="form-group">
+                        <label for="customer-address-text">عنوان التوصيل</label>
+                        <textarea id="customer-address-text" rows="2" placeholder="اكتب عنوانك هنا"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-address-link">رابط العنوان على الخريطة</label>
+                        <input type="text" id="customer-address-link" placeholder="الصق رابط خرائط جوجل أو OSM" />
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="submit-order-btn" style="margin-top:1rem;">تأكيد الطلب</button>
+                    <div id="order-status" style="margin-top:1rem; color: red; font-weight: bold; display:none;"></div>
                 </form>
+                <!-- === End Checkout Form === -->
             </div>
+        </div>
+        <div class="cart-overlay" id="cart-overlay"></div>
+        <!-- === END CART SIDEBAR === -->
 
 
-            <script src="script.js" defer></script>
-            <script type="module" src="/index.tsx"></script>
-            <!-- ✅ Supabase + EmailJS Integration -->
-            <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-            <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-            <script>
-                // Initialize Supabase
-                const supabaseUrl = "https://evhqnshvlblkphzhcqql.supabase.co";
-                const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHFuc2h2bGJsa3BoemhjcXFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4NDkxMzMsImV4cCI6MjA3NDQyNTEzM30.3SmewWKg9YeIGCvgwllGlpx6hP-sBro_IvcI65s3nXg";
-                const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+        <script src="script.js" defer></script>
+        <script type="module" src="/index.tsx"></script>
+        <!-- ✅ Supabase + EmailJS Integration -->
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+        <script>
+            // Initialize Supabase
+            const supabaseUrl = "https://evhqnshvlblkphzhcqql.supabase.co";
+            const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHFuc2h2bGJsa3BoemhjcXFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4NDkxMzMsImV4cCI6MjA3NDQyNTEzM30.3SmewWKg9YeIGCvgwllGlpx6hP-sBro_IvcI65s3nXg";
+            const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-                // Initialize EmailJS
-                emailjs.init("Z1Yvyx9A1Sve68L2c");
+            // Initialize EmailJS
+            emailjs.init("Z1Yvyx9A1Sve68L2c");
 
-                // Handle Order Form Submission
-                document.getElementById("orderForm").addEventListener("submit", async function (event) {
-                    event.preventDefault();
+            // Handle Order Form Submission
+            document.getElementById("orderForm").addEventListener("submit", async function (event) {
+                event.preventDefault();
 
-                    const customer_name = event.target.customer_name.value;
-                    const customer_phone = event.target.customer_phone.value;
+                const customer_name = event.target.customer_name.value;
+                const customer_phone = event.target.customer_phone.value;
 
-                    // ✅ 1. Save order to Supabase
-                    const { data, error } = await supabaseClient
-                        .from("orders")
-                        .insert([{ name: customer_name, phone: customer_phone }]);
+                // ✅ 1. Save order to Supabase
+                const { data, error } = await supabaseClient
+                    .from("orders")
+                    .insert([{ name: customer_name, phone: customer_phone }]);
 
-                    if (error) {
-                        console.error("Supabase Error:", error);
-                    }
+                if (error) {
+                    console.error("Supabase Error:", error);
+                }
 
-                    // ✅ 2. Send Email to you
-                    emailjs.send("service_iclrjoi", "template_yxezw97", {
-                        customer_name,
-                        customer_phone
+                // ✅ 2. Send Email to you
+                emailjs.send("service_iclrjoi", "template_yxezw97", {
+                    customer_name,
+                    customer_phone
+                })
+                    .then(() => {
+                        document.getElementById("status").innerText = " تم إرسال الطلب بنجاح!";
+                        event.target.reset();
                     })
-                        .then(() => {
-                            document.getElementById("status").innerText = " تم إرسال الطلب بنجاح!";
-                            event.target.reset();
-                        })
-                        .catch((err) => {
-                            console.error("EmailJS Error:", err);
-                            document.getElementById("status").innerText = " تعذر إرسال الطلب.";
-                        });
-                });
-            </script>
+                    .catch((err) => {
+                        console.error("EmailJS Error:", err);
+                        document.getElementById("status").innerText = " تعذر إرسال الطلب.";
+                    });
+            });
+        </script>
 
 
-</body>
+    </body>
     </html>

@@ -1,0 +1,231 @@
+<!-- admin.html - لوحة الإدارة للطلبات -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>لوحة الإدارة - تلاجتى</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+        }
+
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 0.5rem;
+            text-align: right;
+        }
+
+        th {
+            background: #f9fafb;
+        }
+
+        .refresh-btn {
+            margin: 1rem 0;
+        }
+
+        .config-row {
+            margin: 1rem 0;
+        }
+
+            .config-row label {
+                margin-left: 1rem;
+            }
+
+        .status {
+            font-weight: bold;
+            margin-right: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            table, th, td {
+                font-size: 0.9rem;
+            }
+
+            .container {
+                padding: 0 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>لوحة الإدارة - الطلبات</h1>
+        <div class="config-row">
+            <label>
+                رابط Supabase:
+                <input id="supabase-url" type="text" style="width:300px" value="https://evhqnshvlblkphzhcqql.supabase.co">
+            </label>
+            <label>
+                مفتاح API:
+                <input id="supabase-key" type="text" style="width:300px"
+                       value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHFuc2h2bGJsa3BoemhjcXFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4NDkxMzMsImV4cCI6MjA3NDQyNTEzM30.3SmewWKg9YeIGCvgwllGlpx6hP-sBro_IvcI65s3nXg">
+            </label>
+            <label>
+                اسم الجدول:
+                <input id="supabase-table" type="text" style="width:120px" value="orders">
+            </label>
+            <button class="btn btn-primary" id="save-config">حفظ الإعدادات</button>
+            <button class="btn" id="test-connection">اختبار الاتصال</button>
+            <span class="status" id="connection-status"></span>
+        </div>
+        <button class="btn btn-primary refresh-btn" id="refresh-orders">تحديث الطلبات</button>
+        <h2>الطلبات من Supabase</h2>
+        <table id="orders-table">
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>اسم العميل</th>
+                    <th>رقم الهاتف</th>
+                    <th>العنوان</th>
+                    <th>المحتويات</th>
+                    <th>المجموع</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <h2>الطلبات الاحتياطية (localStorage)</h2>
+        <table id="fallback-table">
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>اسم العميل</th>
+                    <th>رقم الهاتف</th>
+                    <th>العنوان</th>
+                    <th>المحتويات</th>
+                    <th>المجموع</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <script>
+        // === Admin Dashboard Logic ===
+
+        // Load config from localStorage or defaults
+        function getSupabaseConfig() {
+            return {
+                url: localStorage.getItem('supabaseUrl') || document.getElementById('supabase-url').value.trim(),
+                key: localStorage.getItem('supabaseKey') || document.getElementById('supabase-key').value.trim(),
+                table: localStorage.getItem('supabaseTable') || document.getElementById('supabase-table').value.trim()
+            };
+        }
+
+        // Save config
+        document.getElementById('save-config').onclick = function () {
+            localStorage.setItem('supabaseUrl', document.getElementById('supabase-url').value.trim());
+            localStorage.setItem('supabaseKey', document.getElementById('supabase-key').value.trim());
+            localStorage.setItem('supabaseTable', document.getElementById('supabase-table').value.trim());
+            alert('تم حفظ الإعدادات');
+        };
+
+        // Test connection
+        document.getElementById('test-connection').onclick = async function () {
+            const { url, key, table } = getSupabaseConfig();
+            const status = document.getElementById('connection-status');
+            try {
+                const resp = await fetch(`${url}/rest/v1/${table}?limit=1`, {
+                    headers: { apikey: key, Authorization: `Bearer ${key}` }
+                });
+                status.textContent = resp.ok ? '✅ متصل' : '❌ فشل الاتصال';
+                status.style.color = resp.ok ? 'green' : 'red';
+            } catch {
+                status.textContent = '❌ خطأ في الاتصال';
+                status.style.color = 'red';
+            }
+        };
+
+        // Fetch orders from Supabase
+        async function fetchOrders() {
+            const { url, key, table } = getSupabaseConfig();
+            const tbody = document.getElementById('orders-table').querySelector('tbody');
+            tbody.innerHTML = '';
+            if (!url || !key || !table) {
+                tbody.innerHTML = '<tr><td colspan="6">يرجى ضبط إعدادات Supabase</td></tr>';
+                return;
+            }
+            try {
+                const resp = await fetch(`${url}/rest/v1/${table}?order=created_at.desc`, {
+                    headers: { apikey: key, Authorization: `Bearer ${key}` }
+                });
+                if (!resp.ok) throw new Error('Supabase fetch failed');
+                const orders = await resp.json();
+                if (!orders.length) {
+                    tbody.innerHTML = '<tr><td colspan="6">لا توجد طلبات</td></tr>';
+                    return;
+                }
+                orders.forEach(order => {
+                    let items = [];
+                    try { items = JSON.parse(order.items || '[]'); } catch { items = order.items || []; }
+                    const itemsStr = Array.isArray(items)
+                        ? items.map(i => `${i.name} × ${i.quantity}`).join(', ')
+                        : items;
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                <td>${order.created_at ? new Date(order.created_at).toLocaleString('ar-EG') : ''}</td>
+                <td>${order.customer_name || ''}</td>
+                <td>${order.customer_phone || ''}</td>
+                <td>${order.customer_address_text || order.customer_address_link || ''}</td>
+                <td>${itemsStr}</td>
+                <td>${order.total || ''}</td>
+              `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="6">تعذر جلب الطلبات من Supabase</td></tr>';
+            }
+        }
+
+        // Show fallback orders from localStorage
+        function showFallbackOrders() {
+            const tbody = document.getElementById('fallback-table').querySelector('tbody');
+            tbody.innerHTML = '';
+            let fallbackOrders = [];
+            try { fallbackOrders = JSON.parse(localStorage.getItem('fallbackOrders')) || []; } catch { }
+            if (!fallbackOrders.length) {
+                tbody.innerHTML = '<tr><td colspan="6">لا توجد طلبات احتياطية</td></tr>';
+                return;
+            }
+            fallbackOrders.forEach(order => {
+                const itemsStr = (order.items || []).map(i => `${i.name} × ${i.quantity}`).join(', ');
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+              <td>${order.created_at ? new Date(order.created_at).toLocaleString('ar-EG') : ''}</td>
+              <td>${order.customer_name || ''}</td>
+              <td>${order.customer_phone || ''}</td>
+              <td>${order.customer_address_text || order.customer_address_link || ''}</td>
+              <td>${itemsStr}</td>
+              <td>${order.total || ''}</td>
+            `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Refresh button
+        document.getElementById('refresh-orders').onclick = function () {
+            fetchOrders();
+            showFallbackOrders();
+        };
+
+        // Load config fields from localStorage
+        document.getElementById('supabase-url').value = localStorage.getItem('supabaseUrl') || 'https://evhqnshvlblkphzhcqql.supabase.co';
+        document.getElementById('supabase-key').value = localStorage.getItem('supabaseKey') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHFuc2h2bGJsa3BoemhjcXFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4NDkxMzMsImV4cCI6MjA3NDQyNTEzM30.3SmewWKg9YeIGCvgwllGlpx6hP-sBro_IvcI65s3nXg';
+        document.getElementById('supabase-table').value = localStorage.getItem('supabaseTable') || 'orders';
+
+        // Initial load
+        fetchOrders();
+        showFallbackOrders();
+    </script>
+</body>
+</html>

@@ -484,3 +484,156 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+// === [Paste at the very end of script.js] ===
+
+// jsPDF loader (only loads if needed)
+function loadJsPDF(callback) {
+  if (window.jspdf) return callback();
+  var script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  script.onload = callback;
+  document.body.appendChild(script);
+}
+
+// Helper: Format items for EmailJS and PDF
+function formatCartItems(cart) {
+  return cart.map(item => `${item.name} × ${item.quantity} = ${item.price * item.quantity} ريال`).join('\n');
+}
+
+// Checkout form handler
+document.getElementById('checkout-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const statusEl = document.getElementById('order-status');
+  statusEl.style.display = 'none';
+  statusEl.style.color = 'red';
+
+  // Collect form data
+  const name = document.getElementById('customer-name').value.trim();
+  const phone = document.getElementById('customer-phone').value.trim();
+  const addressText = document.getElementById('customer-address-text').value.trim();
+  const addressLink = document.getElementById('customer-address-link').value.trim();
+
+  // Collect cart data
+  let cart = [];
+  try { cart = JSON.parse(localStorage.getItem('tallagtyCart')) || []; } catch {}
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  // Validate
+  if (!name || !phone) {
+    statusEl.textContent = 'يرجى إدخال الاسم ورقم الهاتف';
+    statusEl.style.display = 'block';
+    return;
+  }
+  if (cart.length === 0) {
+    statusEl.textContent = 'سلة التسوق فارغة';
+    statusEl.style.display = 'block';
+    return;
+  }
+
+  // Disable button, show loading
+  const btn = document.getElementById('submit-order-btn');
+  btn.disabled = true;
+  btn.textContent = '... جارٍ الإرسال';
+
+  // Prepare order object
+  const order = {
+    customer_name: name,
+    customer_phone: phone,
+    customer_address_text: addressText,
+    customer_address_link: addressLink,
+    items: cart,
+    total: total
+  };
+
+  // Supabase config
+  const SUPABASE_URL = 'https://evhqnshvlblkphzhcqql.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHFuc2h2bGJsa3BoemhjcXFsIiwicm9zZSI6ImFub24iLCJpYXQiOjE3NTg4NDkxMzMsImV4cCI6MjA3NDQyNTEzM30.3SmewWKg9YeIGCvgwllGlpx6hP-sBro_IvcI65s3nXg';
+  const SUPABASE_TABLE = 'orders';
+
+  let supabaseOk = false;
+  let orderId = null;
+
+  // Send to Supabase
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/rest/v1/${SUPABASE_TABLE}`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      },
+      body: JSON.stringify({
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        customer_address_text: order.customer_address_text,
+        customer_address_link: order.customer_address_link,
+        items: JSON.stringify(order.items),
+        total: order.total
+      })
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      supabaseOk = true;
+      orderId = data[0]?.id || null;
+    }
+  } catch (err) {
+    supabaseOk = false;
+  }
+
+  // Fallback: store in localStorage if Supabase fails
+  if (!supabaseOk) {
+    let fallbackOrders = [];
+    try { fallbackOrders = JSON.parse(localStorage.getItem('fallbackOrders')) || []; } catch {}
+    fallbackOrders.push({ ...order, created_at: new Date().toISOString() });
+    localStorage.setItem('fallbackOrders', JSON.stringify(fallbackOrders));
+  }
+
+  // Send EmailJS notification
+  try {
+    await loadJsPDF(() => {});
+    await emailjs.send('service_iclrjoi', 'template_yxezw97', {
+      customer_name: name,
+      customer_phone: phone,
+      cart_items: formatCartItems(cart),
+      total: total
+    }, 'Z1Yvyx9A1Sve68L2c');
+  } catch (err) {
+    // Ignore email failure for user
+  }
+
+  // PDF receipt
+  loadJsPDF(() => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFont('helvetica');
+    doc.setFontSize(16);
+    doc.text('فاتورة الطلب', 105, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`التاريخ: ${new Date().toLocaleString('ar-EG')}`, 20, 35);
+    doc.text(`اسم العميل: ${name}`, 20, 45);
+    doc.text(`رقم الهاتف: ${phone}`, 20, 55);
+    doc.text(`العنوان: ${addressText || addressLink}`, 20, 65);
+    doc.text('المحتويات:', 20, 75);
+    let y = 85;
+    cart.forEach(item => {
+      doc.text(`${item.name} × ${item.quantity} = ${item.price * item.quantity} ريال`, 20, y);
+      y += 10;
+    });
+    doc.text(`المجموع: ${total} ريال`, 20, y + 10);
+    doc.save('order_receipt.pdf');
+  });
+
+  // Success message, clear cart
+  statusEl.style.color = 'green';
+  statusEl.textContent = 'تم إرسال الطلب بنجاح! سيتم تحميل الفاتورة.';
+  statusEl.style.display = 'block';
+  btn.disabled = false;
+  btn.textContent = 'تأكيد الطلب';
+  localStorage.setItem('tallagtyCart', '[]');
+  setTimeout(() => {
+    statusEl.style.display = 'none';
+    btn.textContent = 'تأكيد الطلب';
+  }, 4000);
+});
