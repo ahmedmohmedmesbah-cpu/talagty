@@ -1,4 +1,3 @@
-<!-- admin.html - لوحة الإدارة للطلبات -->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -13,6 +12,7 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            padding: 0 1rem;
         }
 
         table {
@@ -23,7 +23,7 @@
 
         th, td {
             border: 1px solid #e5e7eb;
-            padding: 0.5rem;
+            padding: 0.75rem;
             text-align: right;
         }
 
@@ -35,53 +35,18 @@
             margin: 1rem 0;
         }
 
-        .config-row {
-            margin: 1rem 0;
-        }
-
-            .config-row label {
-                margin-left: 1rem;
-            }
-
-        .status {
-            font-weight: bold;
-            margin-right: 1rem;
-        }
-
-        @media (max-width: 600px) {
-            table, th, td {
-                font-size: 0.9rem;
-            }
-
-            .container {
-                padding: 0 0.5rem;
-            }
+        h1, h2 {
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>لوحة الإدارة - الطلبات</h1>
-        <div class="config-row">
-            <label>
-                رابط Supabase:
-                <input id="supabase-url" type="text" style="width:300px" value="https://evhqnshvlblkphzhcqql.supabase.co">
-            </label>
-            <label>
-                مفتاح API:
-                <input id="supabase-key" type="text" style="width:300px"
-                       value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHFuc2h2bGJsa3BoemhjcXFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4NDkxMzMsImV4cCI6MjA3NDQyNTEzM30.3SmewWKg9YeIGCvgwllGlpx6hP-sBro_IvcI65s3nXg">
-            </label>
-            <label>
-                اسم الجدول:
-                <input id="supabase-table" type="text" style="width:120px" value="orders">
-            </label>
-            <button class="btn btn-primary" id="save-config">حفظ الإعدادات</button>
-            <button class="btn" id="test-connection">اختبار الاتصال</button>
-            <span class="status" id="connection-status"></span>
-        </div>
+
         <button class="btn btn-primary refresh-btn" id="refresh-orders">تحديث الطلبات</button>
-        <h2>الطلبات من Supabase</h2>
+
+        <h2>الطلبات الواردة</h2>
         <table id="orders-table">
             <thead>
                 <tr>
@@ -93,8 +58,10 @@
                     <th>المجموع</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            </tbody>
         </table>
+
         <h2>الطلبات الاحتياطية (localStorage)</h2>
         <table id="fallback-table">
             <thead>
@@ -107,125 +74,100 @@
                     <th>المجموع</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+            </tbody>
         </table>
     </div>
+
     <script>
-        // === Admin Dashboard Logic ===
+        // This is the endpoint for our new secure function.
+        const functionUrl = '/.netlify/functions/get-orders';
 
-        // Load config from localStorage or defaults
-        function getSupabaseConfig() {
-            return {
-                url: localStorage.getItem('supabaseUrl') || document.getElementById('supabase-url').value.trim(),
-                key: localStorage.getItem('supabaseKey') || document.getElementById('supabase-key').value.trim(),
-                table: localStorage.getItem('supabaseTable') || document.getElementById('supabase-table').value.trim()
-            };
-        }
-
-        // Save config
-        document.getElementById('save-config').onclick = function () {
-            localStorage.setItem('supabaseUrl', document.getElementById('supabase-url').value.trim());
-            localStorage.setItem('supabaseKey', document.getElementById('supabase-key').value.trim());
-            localStorage.setItem('supabaseTable', document.getElementById('supabase-table').value.trim());
-            alert('تم حفظ الإعدادات');
-        };
-
-        // Test connection
-        document.getElementById('test-connection').onclick = async function () {
-            const { url, key, table } = getSupabaseConfig();
-            const status = document.getElementById('connection-status');
-            try {
-                const resp = await fetch(`${url}/rest/v1/${table}?limit=1`, {
-                    headers: { apikey: key, Authorization: `Bearer ${key}` }
-                });
-                status.textContent = resp.ok ? '✅ متصل' : '❌ فشل الاتصال';
-                status.style.color = resp.ok ? 'green' : 'red';
-            } catch {
-                status.textContent = '❌ خطأ في الاتصال';
-                status.style.color = 'red';
-            }
-        };
-
-        // Fetch orders from Supabase
         async function fetchOrders() {
-            const { url, key, table } = getSupabaseConfig();
             const tbody = document.getElementById('orders-table').querySelector('tbody');
-            tbody.innerHTML = '';
-            if (!url || !key || !table) {
-                tbody.innerHTML = '<tr><td colspan="6">يرجى ضبط إعدادات Supabase</td></tr>';
-                return;
-            }
+            tbody.innerHTML = '<tr><td colspan="6">Loading orders...</td></tr>';
+
             try {
-                const resp = await fetch(`${url}/rest/v1/${table}?order=created_at.desc`, {
-                    headers: { apikey: key, Authorization: `Bearer ${key}` }
-                });
-                if (!resp.ok) throw new Error('Supabase fetch failed');
-                const orders = await resp.json();
-                if (!orders.length) {
-                    tbody.innerHTML = '<tr><td colspan="6">لا توجد طلبات</td></tr>';
+                const response = await fetch(functionUrl);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const orders = await response.json();
+
+                tbody.innerHTML = ''; // Clear the table body
+
+                if (!orders || orders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">No orders found.</td></tr>';
                     return;
                 }
+
                 orders.forEach(order => {
                     let items = [];
-                    try { items = JSON.parse(order.items || '[]'); } catch { items = order.items || []; }
+                    try {
+                        items = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []);
+                    } catch {
+                        items = [];
+                    }
+
                     const itemsStr = Array.isArray(items)
-                        ? items.map(i => `${i.name} × ${i.quantity}`).join(', ')
-                        : items;
+                        ? items.map(i => `${i.name || 'N/A'} × ${i.quantity || 'N/A'}`).join('<br>')
+                        : 'Invalid items format';
+
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                <td>${order.created_at ? new Date(order.created_at).toLocaleString('ar-EG') : ''}</td>
-                <td>${order.customer_name || ''}</td>
-                <td>${order.customer_phone || ''}</td>
-                <td>${order.customer_address_text || order.customer_address_link || ''}</td>
-                <td>${itemsStr}</td>
-                <td>${order.total || ''}</td>
-              `;
+                            <td>${order.created_at ? new Date(order.created_at).toLocaleString('ar-EG') : 'N/A'}</td>
+                            <td>${order.customer_name || 'N/A'}</td>
+                            <td>${order.customer_phone || 'N/A'}</td>
+                            <td>${order.customer_address_text || order.customer_address_link || 'N/A'}</td>
+                            <td>${itemsStr}</td>
+                            <td>${order.total ? order.total + ' ريال' : 'N/A'}</td>
+                        `;
                     tbody.appendChild(tr);
                 });
-            } catch (err) {
-                tbody.innerHTML = '<tr><td colspan="6">تعذر جلب الطلبات من Supabase</td></tr>';
+
+            } catch (error) {
+                console.error('Error fetching orders:', error);
+                tbody.innerHTML = '<tr><td colspan="6">Failed to load orders. Make sure you have deployed the site.</td></tr>';
             }
         }
 
-        // Show fallback orders from localStorage
         function showFallbackOrders() {
             const tbody = document.getElementById('fallback-table').querySelector('tbody');
             tbody.innerHTML = '';
             let fallbackOrders = [];
             try { fallbackOrders = JSON.parse(localStorage.getItem('fallbackOrders')) || []; } catch { }
+
             if (!fallbackOrders.length) {
                 tbody.innerHTML = '<tr><td colspan="6">لا توجد طلبات احتياطية</td></tr>';
                 return;
             }
+
             fallbackOrders.forEach(order => {
-                const itemsStr = (order.items || []).map(i => `${i.name} × ${i.quantity}`).join(', ');
+                const itemsStr = (order.items || []).map(i => `${i.name} × ${i.quantity}`).join('<br>');
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-              <td>${order.created_at ? new Date(order.created_at).toLocaleString('ar-EG') : ''}</td>
-              <td>${order.customer_name || ''}</td>
-              <td>${order.customer_phone || ''}</td>
-              <td>${order.customer_address_text || order.customer_address_link || ''}</td>
-              <td>${itemsStr}</td>
-              <td>${order.total || ''}</td>
-            `;
+                        <td>${order.created_at ? new Date(order.created_at).toLocaleString('ar-EG') : ''}</td>
+                        <td>${order.customer_name || ''}</td>
+                        <td>${order.customer_phone || ''}</td>
+                        <td>${order.customer_address_text || order.customer_address_link || ''}</td>
+                        <td>${itemsStr}</td>
+                        <td>${order.total || ''}</td>
+                    `;
                 tbody.appendChild(tr);
             });
         }
 
-        // Refresh button
-        document.getElementById('refresh-orders').onclick = function () {
+        // Add event listener for the refresh button
+        document.getElementById('refresh-orders').addEventListener('click', () => {
             fetchOrders();
             showFallbackOrders();
-        };
+        });
 
-        // Load config fields from localStorage
-        document.getElementById('supabase-url').value = localStorage.getItem('supabaseUrl') || 'https://evhqnshvlblkphzhcqql.supabase.co';
-        document.getElementById('supabase-key').value = localStorage.getItem('supabaseKey') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2aHFuc2h2bGJsa3BoemhjcXFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4NDkxMzMsImV4cCI6MjA3NDQyNTEzM30.3SmewWKg9YeIGCvgwllGlpx6hP-sBro_IvcI65s3nXg';
-        document.getElementById('supabase-table').value = localStorage.getItem('supabaseTable') || 'orders';
-
-        // Initial load
-        fetchOrders();
-        showFallbackOrders();
+        // Initial load of orders when the page is opened
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchOrders();
+            showFallbackOrders();
+        });
     </script>
 </body>
 </html>
