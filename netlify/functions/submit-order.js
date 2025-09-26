@@ -1,5 +1,17 @@
-// FINAL VERSION
+// FINAL CORRECTED VERSION
 // File: /netlify/functions/submit-order.js
+
+// Helper function to format items for the email
+function formatItemsForEmail(items) {
+    if (!Array.isArray(items)) return '<p>No items in order.</p>';
+
+    let itemsList = items.map(item =>
+        `<li>${item.name || `Product ID: ${item.id}`} (Quantity: ${item.quantity})</li>`
+    ).join('');
+
+    return `<ul>${itemsList}</ul>`;
+}
+
 
 exports.handler = async function (event, context) {
     if (event.httpMethod !== 'POST') {
@@ -18,13 +30,19 @@ exports.handler = async function (event, context) {
 
     try {
         const orderData = JSON.parse(event.body);
-
-        // --- 1. GENERATE A UNIQUE ORDER ID ---
-        // Creates an ID based on the current date and a random number
         const order_id = `T${Date.now().toString().slice(-6)}`;
 
-        // --- 2. SAVE ORDER TO SUPABASE ---
+        // --- 1. SAVE ORDER TO SUPABASE ---
         const supabaseEndpoint = `${SUPABASE_URL}/rest/v1/orders`;
+        const supabasePayload = {
+            order_id: order_id,
+            customer_name: orderData.customer_name,
+            customer_phone: orderData.customer_phone,
+            customer_address_text: orderData.customer_address_text,
+            items: orderData.items, // Storing the cart items with names
+            total: orderData.total
+        };
+
         const supabaseResponse = await fetch(supabaseEndpoint, {
             method: 'POST',
             headers: {
@@ -33,15 +51,7 @@ exports.handler = async function (event, context) {
                 'Authorization': `Bearer ${SUPABASE_KEY}`,
                 'Prefer': 'return=minimal'
             },
-            body: JSON.stringify({
-                // Add the new order_id to the data saved in Supabase
-                order_id: order_id,
-                customer_name: orderData.customer_name,
-                customer_phone: orderData.customer_phone,
-                customer_address_text: orderData.customer_address_text,
-                items: orderData.items,
-                total: orderData.total
-            })
+            body: JSON.stringify(supabasePayload)
         });
 
         if (!supabaseResponse.ok) {
@@ -49,17 +59,19 @@ exports.handler = async function (event, context) {
             throw new Error('Failed to save order to Supabase.');
         }
 
-        // --- 3. SEND EMAIL NOTIFICATION VIA EMAILJS ---
+        // --- 2. SEND EMAIL NOTIFICATION ---
         const emailParams = {
             service_id: EMAILJS_SERVICE_ID,
             template_id: EMAILJS_TEMPLATE_ID,
             user_id: EMAILJS_PUBLIC_KEY,
-            accessToken: EMAILJS_PRIVATE_KEY, // The Private Key is used for secure, backend requests
+            accessToken: EMAILJS_PRIVATE_KEY,
             template_params: {
-                // These parameters must exactly match the variables in your EmailJS template
                 order_id: order_id,
                 customer_name: orderData.customer_name,
-                customer_phone: orderData.customer_phone
+                customer_phone: orderData.customer_phone,
+                customer_address: orderData.customer_address_text,
+                items_html: formatItemsForEmail(orderData.items),
+                total: `${orderData.total.toFixed(2)} SAR`
             }
         };
 
@@ -70,11 +82,10 @@ exports.handler = async function (event, context) {
         });
 
         if (!emailjsResponse.ok) {
-            // Log the email error but don't fail the function. Saving the order is most important.
             console.error('EmailJS error:', await emailjsResponse.text());
         }
 
-        // --- 4. RETURN SUCCESS TO THE USER ---
+        // --- 3. RETURN SUCCESS ---
         return {
             statusCode: 200,
             body: JSON.stringify({ message: 'Order submitted successfully' })

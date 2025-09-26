@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM ELEMENTS ---
     const cartSidebar = document.getElementById('cart-sidebar');
     const cartOverlay = document.getElementById('cart-overlay');
-    const allCartToggles = document.querySelectorAll('.nav__cart-btn, #cart-toggle'); // All buttons that open cart
+    const allCartToggles = document.querySelectorAll('.nav__cart-btn, #cart-toggle');
     const cartCloseBtn = document.getElementById('cart-close');
     const cartBody = document.getElementById('cart-body');
     const cartCountEl = document.getElementById('cart-count');
@@ -46,20 +46,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const updateCartInfo = () => {
         const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-        const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const subtotal = cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0);
         if (cartCountEl) cartCountEl.textContent = String(totalItems);
         if (cartSubtotalEl) cartSubtotalEl.textContent = currencyFmt.format(subtotal);
     };
 
     const renderCart = () => {
         if (!cartBody) return;
-        cartBody.innerHTML = ''; // Clear previous items
+        cartBody.innerHTML = '';
 
         if (cart.length === 0) {
-            cartBody.innerHTML = `
-                <p class="cart-sidebar__empty">سلة مشترياتك فارغة.</p>
-            `;
-            // Ensure footer is hidden or disabled if cart is empty
+            cartBody.innerHTML = `<p class="cart-sidebar__empty">سلة مشترياتك فارغة.</p>`;
             const footer = cartSidebar.querySelector('.cart-sidebar__footer');
             if (footer) footer.style.display = 'none';
         } else {
@@ -121,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CHECKOUT LOGIC ---
     const createCheckoutSidebar = () => {
-        if (document.getElementById('checkout-sidebar')) return; // Already exists
+        if (document.getElementById('checkout-sidebar')) return;
 
         const checkoutHTML = `
             <div class="cart-sidebar" id="checkout-sidebar">
@@ -148,14 +145,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     </form>
                 </div>
                  <div class="cart-sidebar__footer">
-                    <button class="btn" id="back-to-cart-btn" style="width:100%; background-color: var(--text-muted); color:white;">الرجوع للسلة</button>
+                    <button type="button" class="btn" id="back-to-cart-btn" style="width:100%; background-color: var(--text-muted); color:white;">الرجوع للسلة</button>
                 </div>
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', checkoutHTML);
 
-        // Add event listeners for the new sidebar
-        const checkoutSidebar = document.getElementById('checkout-sidebar');
         document.getElementById('checkout-close').addEventListener('click', closeAllSidebars);
         document.getElementById('back-to-cart-btn').addEventListener('click', () => {
             closeAllSidebars();
@@ -174,14 +169,21 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.textContent = 'جاري إرسال الطلب...';
         statusEl.style.display = 'none';
 
-        // We pass the PRODUCTS_MAP so the email function knows the names and prices
+        // Add product names to the cart items before sending
+        const itemsWithNames = cart.map(item => {
+            const product = PRODUCTS_MAP[item.id];
+            return {
+                ...item,
+                name: product ? product.name : 'Unknown Item'
+            };
+        });
+
         const orderPayload = {
             customer_name: document.getElementById('customer-name').value,
             customer_phone: document.getElementById('customer-phone').value,
             customer_address_text: document.getElementById('customer-address-text').value,
-            items: cart,
-            total: cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0),
-            productsMap: PRODUCTS_MAP // Add this line
+            items: itemsWithNames, // Send the cart with product names
+            total: cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0)
         };
 
         try {
@@ -198,7 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
             statusEl.style.color = 'green';
             statusEl.style.display = 'block';
 
-            // Clear cart and update UI
             cart = [];
             saveCart();
             renderCart();
@@ -218,21 +219,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-
     // --- EVENT LISTENERS ---
-    // Universal click handler
     document.addEventListener('click', (e) => {
-        // Add to cart buttons
         const addToCartBtn = e.target.closest('.add-to-cart-btn');
         if (addToCartBtn) {
             e.preventDefault();
-            const productId = addToCartBtn.dataset.productId;
-            if (productId) {
-                addToCart(productId);
-            }
+            addToCart(addToCartBtn.dataset.productId);
         }
 
-        // Cart quantity controls
         const cartItemEl = e.target.closest('.cart-item');
         if (cartItemEl) {
             const productId = cartItemEl.dataset.productId;
@@ -243,18 +237,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateQuantity(productId, cart.find(i => i.id === productId).quantity - 1);
             }
             if (e.target.closest('.cart-item__remove')) {
-                updateQuantity(productId, 0); // Remove item
+                updateQuantity(productId, 0);
             }
         }
 
-        // Open checkout from cart
         if (e.target.id === 'go-to-checkout-btn') {
             closeAllSidebars();
             openSidebar(document.getElementById('checkout-sidebar'));
         }
     });
 
-    // Open/Close cart sidebar
     allCartToggles.forEach(btn => btn.addEventListener('click', () => openSidebar(cartSidebar)));
     if (cartCloseBtn) cartCloseBtn.addEventListener('click', closeAllSidebars);
     if (cartOverlay) cartOverlay.addEventListener('click', closeAllSidebars);
@@ -264,11 +256,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const footer = cartSidebar.querySelector('.cart-sidebar__footer');
         if (!footer) return;
 
-        // Remove old form if it exists
         const oldForm = footer.querySelector('#checkout-form');
         if (oldForm) oldForm.remove();
 
-        // Add new checkout button
         footer.innerHTML = `
             <div class="cart-sidebar__subtotal">
                 <span>الإجمالي</span>
@@ -278,9 +268,8 @@ document.addEventListener('DOMContentLoaded', () => {
          `;
     };
 
-
     // --- INITIALIZATION ---
     setupCartFooter();
-    renderCart(); // Initial render on page load
-    createCheckoutSidebar(); // Create the checkout sidebar on page load
+    renderCart();
+    createCheckoutSidebar();
 });

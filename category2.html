@@ -127,44 +127,17 @@
         </div>
     </footer>
 
-    <!-- === BEGIN CART SIDEBAR (copy and replace in every HTML file) === -->
+    <!-- Cart Sidebar -->
     <div class="cart-sidebar" id="cart-sidebar">
         <div class="cart-sidebar__header">
             <h2>سلة مشترياتك</h2>
             <button class="cart-sidebar__close" id="cart-close">&times;</button>
         </div>
         <div class="cart-sidebar__body" id="cart-body"></div>
-        <div class="cart-sidebar__footer">
-            <div class="cart-sidebar__subtotal">
-                <span>الإجمالي</span>
-                <span id="cart-subtotal">$0.00</span>
-            </div>
-            <!-- === Checkout Form: Paste below subtotal, before closing div === -->
-            <form id="checkout-form" style="margin-top:1rem;">
-                <div class="form-group">
-                    <label for="customer-name">اسم العميل</label>
-                    <input type="text" id="customer-name" required placeholder="أدخل اسمك" />
-                </div>
-                <div class="form-group">
-                    <label for="customer-phone">رقم الهاتف</label>
-                    <input type="tel" id="customer-phone" required placeholder="أدخل رقم الهاتف" />
-                </div>
-                <div class="form-group">
-                    <label for="customer-address-text">عنوان التوصيل</label>
-                    <textarea id="customer-address-text" rows="2" placeholder="اكتب عنوانك هنا"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="customer-address-link">رابط العنوان على الخريطة</label>
-                    <input type="text" id="customer-address-link" placeholder="الصق رابط خرائط جوجل أو OSM" />
-                </div>
-                <button type="submit" class="btn btn-primary" id="submit-order-btn" style="margin-top:1rem;">تأكيد الطلب</button>
-                <div id="order-status" style="margin-top:1rem; color: red; font-weight: bold; display:none;"></div>
-            </form>
-            <!-- === End Checkout Form === -->
-        </div>
+        <div class="cart-sidebar__footer"></div>
     </div>
     <div class="cart-overlay" id="cart-overlay"></div>
-    <!-- === END CART SIDEBAR === -->
+    <!-- End Cart Sidebar -->
 
     <script src="script.js" defer></script>
 </body>
