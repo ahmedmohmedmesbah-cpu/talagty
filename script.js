@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const closeAllSidebars = () => {
         document.querySelectorAll('.cart-sidebar.active, .modal-overlay.active').forEach(el => el.classList.remove('active'));
-        cartOverlay.classList.remove('active');
+        if (cartOverlay) cartOverlay.classList.remove('active');
     };
 
     const updateCartInfo = () => {
@@ -353,3 +353,4 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCart();
     createCheckoutSidebar();
 });
+
