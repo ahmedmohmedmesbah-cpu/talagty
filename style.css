@@ -497,7 +497,26 @@ img { max-width: 100%; height: auto; display: block; }
     animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
     transform: translate3d(0, 0, 0);
 }
+/* ===== Toast Notification for Errors ===== */
+.toast-notification {
+    position: fixed;
+    bottom: -100px; /* Start hidden */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #ef4444; /* Red for error */
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    z-index: 300;
+    opacity: 0;
+    transition: opacity 0.3s ease, bottom 0.3s ease;
+}
 
+    .toast-notification.show {
+        opacity: 1;
+        bottom: 30px; /* Slide in */
+    }
 @keyframes shake {
     10%, 90% {
         transform: translate3d(-1px, 0, 0);
