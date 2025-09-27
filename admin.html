@@ -79,8 +79,8 @@
     </div>
 
     <script>
-        // This is the endpoint for our new secure function.
-        const functionUrl = '/.netlify/functions/get-orders';
+        // CORRECTED: This is the endpoint for your Vercel function.
+        const functionUrl = '/api/get-orders';
 
         async function fetchOrders() {
             const tbody = document.getElementById('orders-table').querySelector('tbody');
@@ -114,13 +114,13 @@
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                            <td>${order.created_at ? new Date(order.created_at).toLocaleString('ar-EG') : 'N/A'}</td>
-                            <td>${order.customer_name || 'N/A'}</td>
-                            <td>${order.customer_phone || 'N/A'}</td>
-                            <td>${order.customer_address_text || order.customer_address_link || 'N/A'}</td>
-                            <td>${itemsStr}</td>
-                            <td>${order.total ? order.total + ' ريال' : 'N/A'}</td>
-                        `;
+                                <td>${order.created_at ? new Date(order.created_at).toLocaleString('ar-EG') : 'N/A'}</td>
+                                <td>${order.customer_name || 'N/A'}</td>
+                                <td>${order.customer_phone || 'N/A'}</td>
+                                <td>${order.customer_address_text || order.customer_address_link || 'N/A'}</td>
+                                <td>${itemsStr}</td>
+                                <td>${order.total ? order.total + ' ريال' : 'N/A'}</td>
+                            `;
                     tbody.appendChild(tr);
                 });
 
@@ -145,13 +145,13 @@
                 const itemsStr = (order.items || []).map(i => `${i.name} × ${i.quantity}`).join('<br>');
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                        <td>${order.created_at ? new Date(order.created_at).toLocaleString('ar-EG') : ''}</td>
-                        <td>${order.customer_name || ''}</td>
-                        <td>${order.customer_phone || ''}</td>
-                        <td>${order.customer_address_text || order.customer_address_link || ''}</td>
-                        <td>${itemsStr}</td>
-                        <td>${order.total || ''}</td>
-                    `;
+                            <td>${order.created_at ? new Date(order.created_at).toLocaleString('ar-EG') : ''}</td>
+                            <td>${order.customer_name || ''}</td>
+                            <td>${order.customer_phone || ''}</td>
+                            <td>${order.customer_address_text || order.customer_address_link || ''}</td>
+                            <td>${itemsStr}</td>
+                            <td>${order.total || ''}</td>
+                        `;
                 tbody.appendChild(tr);
             });
         }
