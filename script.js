@@ -296,23 +296,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const itemsWithData = cart.map(item => ({ ...item, name: PRODUCTS_MAP[item.id]?.name || 'Unknown' }));
         const orderTotal = cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0);
 
+        // CORRECTED PAYLOAD: This now sends the correct data and removes redundancy.
         const orderPayload = {
             customer_name: document.getElementById('customer-name').value,
             customer_phone: document.getElementById('customer-phone').value,
             customer_address_text: document.getElementById('customer-address-text').value,
             items: itemsWithData,
-            total: orderTotal,
-            order_details: itemsWithData
+            total: orderTotal
         };
 
         try {
-            // CORRECTED: This is the endpoint for your Vercel function.
             const response = await fetch('/api/submit-order', {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' }, // This header is important
                 body: JSON.stringify(orderPayload)
             });
 
-            if (!response.ok) { throw new Error('Failed to submit order'); }
+            if (!response.ok) {
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (e) {
+                    throw new Error(response.statusText);
+                }
+                throw new Error(errorData.error || 'Failed to submit order');
+            }
 
             const result = await response.json();
             orderPayload.order_id = result.order_id;
@@ -326,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showDownloadModal(orderPayload);
 
         } catch (error) {
-            console.error('Order submission error:', error);
+            console.error('Order submission error:', error.message);
             statusEl.textContent = 'حدث خطأ. الرجاء المحاولة مرة أخرى.';
             statusEl.style.color = 'red';
             statusEl.style.display = 'block';

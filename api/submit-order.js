@@ -11,12 +11,13 @@ export default async function handler(request, response) {
         const orderData = request.body;
         const order_id = `T${Date.now().toString().slice(-6)}`;
 
+        // CORRECTED PAYLOAD: This now includes customer_address_text and removes the redundant 'order_details'.
         const supabasePayload = {
             order_id: order_id,
             customer_name: orderData.customer_name,
             customer_phone: orderData.customer_phone,
+            customer_address_text: orderData.customer_address_text, // This was the missing field
             items: orderData.items,
-            order_details: orderData.items,
             total: orderData.total
         };
 
@@ -27,7 +28,8 @@ export default async function handler(request, response) {
         });
 
         if (!supabaseResponse.ok) {
-            console.error('Supabase error:', await supabaseResponse.text());
+            const errorText = await supabaseResponse.text();
+            console.error('Supabase error:', errorText);
             throw new Error('Failed to save order to Supabase.');
         }
 
