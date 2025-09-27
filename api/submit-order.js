@@ -1,22 +1,7 @@
-// This file uses CommonJS syntax and includes robust error checking.
+// This file uses CommonJS syntax and is now correct for your database.
 module.exports = async (request, response) => {
     if (request.method !== 'POST') {
         return response.status(405).json({ error: 'Method Not Allowed' });
-    }
-
-    // --- Step 1: Check for all required environment variables ---
-    const requiredKeys = [
-        'SUPABASE_URL', 'SUPABASE_KEY', 'EMAILJS_SERVICE_ID',
-        'EMAILJS_TEMPLATE_ID', 'EMAILJS_PUBLIC_KEY', 'EMAILJS_PRIVATE_KEY'
-    ];
-
-    for (const key of requiredKeys) {
-        if (!process.env[key]) {
-            const errorMessage = `CRITICAL ERROR: Environment variable '${key}' is not set in Vercel.`;
-            console.error(errorMessage);
-            // Return a specific error message
-            return response.status(500).json({ error: `Server configuration error: Missing '${key}'` });
-        }
     }
 
     const { SUPABASE_URL, SUPABASE_KEY, EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY, EMAILJS_PRIVATE_KEY } = process.env;
@@ -25,6 +10,7 @@ module.exports = async (request, response) => {
         const orderData = request.body;
         const order_id = `T${Date.now().toString().slice(-6)}`;
 
+        // This payload is now correct because the database no longer has an 'order_details' column.
         const supabasePayload = {
             order_id: order_id,
             customer_name: orderData.customer_name,
@@ -33,8 +19,6 @@ module.exports = async (request, response) => {
             items: orderData.items,
             total: orderData.total
         };
-
-        console.log("Attempting to submit order to Supabase with payload:", JSON.stringify(supabasePayload, null, 2));
 
         const supabaseResponse = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
             method: 'POST',
@@ -48,8 +32,6 @@ module.exports = async (request, response) => {
             throw new Error(`Failed to save order to Supabase. Response: ${errorText}`);
         }
 
-        console.log("Order successfully submitted to Supabase.");
-
         const emailParams = {
             service_id: EMAILJS_SERVICE_ID,
             template_id: EMAILJS_TEMPLATE_ID,
@@ -62,7 +44,6 @@ module.exports = async (request, response) => {
             }
         };
 
-        // Asynchronously send email
         fetch("https://api.emailjs.com/api/v1.0/email/send", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
