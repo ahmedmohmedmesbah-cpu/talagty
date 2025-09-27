@@ -1,4 +1,4 @@
-// FINAL SCRIPT - With PDF Font Fix, Cart Animation, and Error Message
+// FINAL SCRIPT - PDF Feature Removed for Simplicity
 document.addEventListener('DOMContentLoaded', () => {
 
     const PRODUCTS_DATA = [
@@ -120,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    function showToast(message, duration = 3000) {
+    function showToast(message, isSuccess = true) {
         let toast = document.querySelector('.toast-notification');
         if (!toast) {
             toast = document.createElement('div');
@@ -129,116 +129,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         toast.textContent = message;
 
+        // Change color for success/error
+        toast.style.backgroundColor = isSuccess ? '#22c55e' : '#ef4444';
+
         setTimeout(() => {
             toast.classList.add('show');
         }, 100);
 
         setTimeout(() => {
             toast.classList.remove('show');
-            // Allow time for fade out animation before removing
             setTimeout(() => {
                 if (toast && document.body.contains(toast)) {
                     document.body.removeChild(toast);
                 }
             }, 500);
-        }, duration);
-    }
-
-    function loadJsPDF(callback) {
-        if (window.jspdf) return callback(window.jspdf);
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-        script.onload = () => callback(window.jspdf);
-        script.onerror = () => {
-            console.error("Failed to load jsPDF library.");
-            showToast("تعذر تحميل مكتبة الفواتير. يرجى التحقق من اتصالك بالإنترنت.");
-        };
-        document.head.appendChild(script);
-    }
-
-    function generatePdfReceipt(orderData) {
-        try {
-            loadJsPDF(({ jsPDF }) => {
-                if (!jsPDF) {
-                    showToast("حدث خطأ في تحميل مكتبة إنشاء الفواتير.");
-                    return;
-                }
-                const doc = new jsPDF();
-
-                // --- FONT FIX: This is the complete and correct Base64 encoded Amiri font for Arabic support ---
-                const amiriFont = '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C4AAAAAAAAB//8AAgABAAAAAAAAABIAAAABAAEAAAAAAAEAAQABAAEAAAAAAAEAAQABAAEAAAAAAAEAAQAAAAEAAgAAAAEAAgAAAAAAAAA/2P/lACEABQAIAAcA/wJt//8AAAAA/9j/5QAhAAoACAAMAP8CbgAAAAAANQECAAQAAAAAAQAFAAAAAQACAAEACgABADkBAgAEAAAAAAEA/wAAAAEAAwD/AAwAAQAAAAAAAQABAAAAAQACAAAAAAADAAIABAD//v/+////////AAAAAP/4//3//v/+////////AAAAAP/4//3//v//AAAv/3/4AAAv/3/4AAAv/3/4AAAv/3/4AAAv/3/4AAAv/3/4AAAAAADYACoADQAsAJQAzAFQAbACvANAAvwDYAAQABQAIAAkACgALAAwADQAOAA8AEAARABIAEwAUABUAFgAXABgAGQAaABsAHAAdAB4AHwAgACEAIgAjACQAJQAmACcAKAApACoAKwAsAC0ALgAvADAAMQAyADMANAA1ADYANwA4ADkAOgA7ADwAPQA+AD8AQABBAEIAQwBEAEUARgBHAEgASQBKAEsATABNAE4ATwBQAHEAFAAAAAABAAYAAgABAwAABgAEAAIAAQMAAAYABAADAAEABQAEAAcAAAEGAAYAAAAIAAYAGQAhACEABAAIAAgABAABAAEAAAAHAAAAFgAABgAHAAgACQAKAAsADAAIAAgABAABAAEAAAAFAAAAFgAAAAgACAAIABAASgBTAFcAAAEzMjY3JzMRMxEzExEzFhUUBiMiJjU0NxEzERQGIiY1NDY3PgE3MxEjARQGIiY1NDYzMhY/ASMR/t8B/uABZ/7w/vCjAgIEBggMCAgDBgUCAo//AAMDBQMEBgIDBggMCAECA3wGBQgEBAMDBQUCA/6r/tD+6o0BfwEDBAgLBQYHBAYDAQAAAAEABgAAAAIAAQAAAAAABQAAABYAAAAIAAQACAAgAHgAhwCTAAEAAQAAAAQAAAACAAEABwAAAAABAAQAAgABAAAAAAEAAQAAAAIAAgAAAAEAAgAAAAMAAgAAAAEAAwADAAcABQABAAgAAAAAAQAJAAEAAQAAAAABAAEADAAHAAEAAQAAAAABAAEADgAEAAEABQAAAAABAAQADwAHAAMAAQAAAAABAAEAEAADAAIAAgAAAAAFAAIADAAIABAASgBUAFgAcQCBAJsAAAEzMjY3JzMRMxEzExEzFhUUBiMiJjU0NxEzERQGIiY1NDY3PgE3MxEjARQGIiY1NDYzMhY/ASMRMhYVFAYjIiY1NDY3MzQ2MyEyFhUUDgIjIiY1/t8B/uABZ/7w/vCjAgIEBggMCAgDBgUCAo//AAMDBQMEBgIDBggMCAECA3wGBQgEBAMDBQUCAgMHCAsHAxQOAwL+/gNE/ur+6o0BfwEDBAgLBQYHBAYDAv4SAREPBQECEhMUAgMBAAEABgAAAAIAAQAAAAAABgAAABYAAAAIAAQACAAYAEgAXQB3AAEAAQAAAAQAAAAAAAEAAQAAAAEAAQABAAQAAQABAAQAAgABAAQAAwABAAQABAACAAcABAAFAAYABAAEAAcACAAEAAgABAAJAAQACgAEAAoAAwAKAAcACwAIAAwACAAIAAMABgACAAkAEwAaACIAIgAEAAgACAABAAYAAAAHAAAAFgAABgAHAAgACQAKAAsADAAIAAgACAABAAIAAAAEAAgABQAFAAEAAQAAAAUAAAAWAAAABwAIAAgACgALAAwADQAOAA8AEAARABIAEwAUABUAFgAXABgAGQAaAAMAAAAAAAMAFwAAARsAAAAGAAIAAgAGBgoMBgQCAAAAAQACAAAAAAAAAgAAAAEAAAAAAAAAAAAAAA0AABQAAAAAAGMAbgCEALwAwgDMAAAAAAAGAAEAAAAAAAAAAAAAAAAACwBUAFYAXABeAGIAZABoAGoAbABuAHAAcgB0AHYAZgBqAHIAeACEAIgAkgCeAKAAqACuALQAtgC8AMQAygDVANwA4QDoAPQBBAEcASgBPAFMAbABuAHAAegB8AH4AgACCAP4A/AEUAWwBrAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAKAAAAJACgAKAAoAigCgAKYAyADIAAAAAAFYAhgAAAAAAAQAABQAIAAcA/wJt//8AAAAA/9j/5QAhAAoACAAMAP8CbgAAAAAANQECAAQAAAAAAQAFAAAAAQACAAEACgABADkBAgAEAAAAAAEA/wAAAAEAAwD/AAwAAQAAAAAAAQABAAAAAQACAAAAAAADAAIABAD//v/+////////AAAAAP/4//3//v/+////////AAAAAP/4//3//v//AAAv/3/4AAAv/3/4AAAv/3/4AAAv/3/4AAAv/3/4AAAv/3/4AAAAAAAACQAAACYAAAAiAAABNgAABOA=';
-                doc.addFileToVFS('Amiri-Regular.ttf', amiriFont);
-                doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
-                doc.setFont('Amiri', 'normal');
-
-                doc.setR2L(true);
-
-                doc.setFontSize(22);
-                doc.text("فاتورة طلب - تلاجتى", 105, 20, { align: 'center' });
-
-                doc.setFontSize(12);
-                doc.text(`رقم الطلب: ${orderData.order_id}`, 190, 40, { align: 'right' });
-                doc.text(`اسم العميل: ${orderData.customer_name}`, 190, 50, { align: 'right' });
-                doc.text(`رقم الهاتف: ${orderData.customer_phone}`, 190, 60, { align: 'right' });
-                doc.text(`تاريخ الطلب: ${new Date().toLocaleString('ar-EG')}`, 190, 70, { align: 'right' });
-
-                doc.line(20, 80, 190, 80);
-
-                let y = 90;
-                orderData.items.forEach(item => {
-                    const product = PRODUCTS_MAP[item.id];
-                    if (product) {
-                        const lineText = `${(product.price * item.quantity).toFixed(2)} SAR  -  (الكمية: ${item.quantity})  ${product.name}`;
-                        doc.text(lineText, 190, y, { align: 'right' });
-                        y += 10;
-                    }
-                });
-
-                doc.line(20, y, 190, y);
-
-                doc.setFontSize(16);
-                const totalText = `الإجمالي: ${currencyFmt.format(orderData.total)}`;
-                doc.text(totalText, 190, y + 15, { align: 'right' });
-
-                doc.save(`receipt-${orderData.order_id}.pdf`);
-            });
-        } catch (error) {
-            console.error("PDF generation failed:", error);
-            showToast("حدث خطأ أثناء إنشاء الفاتورة. يرجى المحاولة مرة أخرى.");
-        }
-    }
-
-    function showDownloadModal(orderData) {
-        if (!document.getElementById('receipt-modal')) {
-            const modalHTML = `
-                <div class="modal-overlay" id="receipt-modal-overlay">
-                    <div class="modal">
-                        <h2>تم تأكيد طلبك بنجاح!</h2>
-                        <p>هل ترغب في تحميل نسخة من الفاتورة بصيغة PDF؟</p>
-                        <div class="modal-actions">
-                            <button id="download-pdf-btn" class="btn btn-primary">نعم، تحميل الفاتورة</button>
-                            <button id="close-modal-btn" class="btn btn-secondary">لا، شكراً</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-        }
-
-        const modalOverlay = document.getElementById('receipt-modal-overlay');
-        const downloadBtn = document.getElementById('download-pdf-btn');
-        const closeBtn = document.getElementById('close-modal-btn');
-
-        modalOverlay.classList.add('active');
-
-        downloadBtn.onclick = () => {
-            generatePdfReceipt(orderData);
-            modalOverlay.classList.remove('active');
-        };
-
-        closeBtn.onclick = () => {
-            modalOverlay.classList.remove('active');
-        };
+        }, 3000);
     }
 
     const createCheckoutSidebar = () => {
@@ -296,7 +201,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const itemsWithData = cart.map(item => ({ ...item, name: PRODUCTS_MAP[item.id]?.name || 'Unknown' }));
         const orderTotal = cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0);
 
-        // CORRECTED PAYLOAD: This now sends the correct data and removes redundancy.
         const orderPayload = {
             customer_name: document.getElementById('customer-name').value,
             customer_phone: document.getElementById('customer-phone').value,
@@ -308,22 +212,15 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/submit-order', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }, // This header is important
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderPayload)
             });
 
             if (!response.ok) {
-                let errorData;
-                try {
-                    errorData = await response.json();
-                } catch (e) {
-                    throw new Error(response.statusText);
-                }
-                throw new Error(errorData.error || 'Failed to submit order');
+                throw new Error('Failed to submit order');
             }
 
-            const result = await response.json();
-            orderPayload.order_id = result.order_id;
+            await response.json(); // We still wait for the response to confirm success
 
             cart = [];
             saveCart();
@@ -331,13 +228,15 @@ document.addEventListener('DOMContentLoaded', () => {
             closeAllSidebars();
             document.getElementById('order-form').reset();
 
-            showDownloadModal(orderPayload);
+            // MODIFIED: Show a simple success toast instead of the PDF modal.
+            showToast('تم تأكيد طلبك بنجاح!', true);
 
         } catch (error) {
-            console.error('Order submission error:', error.message);
+            console.error('Order submission error:', error);
             statusEl.textContent = 'حدث خطأ. الرجاء المحاولة مرة أخرى.';
             statusEl.style.color = 'red';
             statusEl.style.display = 'block';
+            showToast('فشل إرسال الطلب. يرجى المحاولة مرة أخرى.', false);
         } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = 'تأكيد الطلب';

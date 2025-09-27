@@ -1,5 +1,5 @@
-// This file uses Vercel's required syntax.
-export default async function handler(request, response) {
+// This file uses CommonJS syntax for maximum compatibility with Vercel.
+module.exports = async (request, response) => {
     const { SUPABASE_URL, SUPABASE_KEY } = process.env;
     const SUPABASE_TABLE = 'orders';
 
@@ -19,11 +19,10 @@ export default async function handler(request, response) {
 
         const data = await supabaseResponse.json();
 
-        // Return the data using Vercel's response object
         return response.status(200).json(data);
 
     } catch (error) {
         console.error('Error fetching from Supabase:', error);
         return response.status(500).json({ error: 'Failed to fetch orders from Supabase.' });
     }
-}
+};
