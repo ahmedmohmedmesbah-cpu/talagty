@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'ln8', name: 'لانشون ديك رومى', price: 49.00, imageUrl: 'assets/لانشون ديك رومى.jpg' }
     ];
     const PRODUCTS_MAP = Object.fromEntries(PRODUCTS_DATA.map(p => [p.id, p]));
+    const ORDER_API_BASE_URL = (window.TALLAGTY_API_BASE_URL || '').replace(/\/$/, '');
     const currencyFmt = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' });
 
     const cartSidebar = document.getElementById('cart-sidebar');
@@ -198,29 +199,23 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.textContent = 'جاري إرسال الطلب...';
         statusEl.style.display = 'none';
 
-        const itemsWithData = cart.map(item => ({ ...item, name: PRODUCTS_MAP[item.id]?.name || 'Unknown' }));
-        const orderTotal = cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0);
-
         const orderPayload = {
-            customer_name: document.getElementById('customer-name').value,
-            customer_phone: document.getElementById('customer-phone').value,
-            customer_address_text: document.getElementById('customer-address-text').value,
-            items: itemsWithData,
-            total: orderTotal
+            customer_name: document.getElementById('customer-name').value.trim(),
+            customer_phone: document.getElementById('customer-phone').value.trim(),
+            customer_address_text: document.getElementById('customer-address-text').value.trim(),
+            items: cart.map(item => ({ product_id: item.id, quantity: item.quantity }))
         };
 
         try {
-            const response = await fetch('/api/submit-order', {
+            if (!ORDER_API_BASE_URL) throw new Error('Order API URL is not configured');
+            const response = await fetch(`${ORDER_API_BASE_URL}/api/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderPayload)
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to submit order');
-            }
-
-            await response.json(); // We still wait for the response to confirm success
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.detail || 'Failed to submit order');
 
             cart = [];
             saveCart();
@@ -229,11 +224,11 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('order-form').reset();
 
             // MODIFIED: Show a simple success toast instead of the PDF modal.
-            showToast('تم تأكيد طلبك بنجاح!', true);
+            showToast(`تم تأكيد طلبك بنجاح. رقم الطلب: ${result.order_number}`, true);
 
         } catch (error) {
             console.error('Order submission error:', error);
-            statusEl.textContent = 'حدث خطأ. الرجاء المحاولة مرة أخرى.';
+            statusEl.textContent = error.message || 'حدث خطأ. الرجاء المحاولة مرة أخرى.';
             statusEl.style.color = 'red';
             statusEl.style.display = 'block';
             showToast('فشل إرسال الطلب. يرجى المحاولة مرة أخرى.', false);
