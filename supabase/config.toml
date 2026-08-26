@@ -1,0 +1,2 @@
+[functions.talagty-api]
+verify_jwt = false
