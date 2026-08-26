@@ -13,7 +13,13 @@ def _engine_options(database_url: str) -> dict:
     return options
 
 
-engine = create_engine(get_settings().database_url, **_engine_options(get_settings().database_url))
+database_url = get_settings().database_url
+# Supabase may label its PostgreSQL URI with the legacy postgres:// scheme.
+# SQLAlchemy requires the explicit postgresql:// dialect name.
+if database_url.startswith("postgres://"):
+    database_url = "postgresql://" + database_url[len("postgres://"):]
+
+engine = create_engine(database_url, **_engine_options(database_url))
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 
