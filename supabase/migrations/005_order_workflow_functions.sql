@@ -12,20 +12,36 @@ DECLARE
   v_public_id UUID := gen_random_uuid();
   v_order_number TEXT := 'TLG-' || to_char(now(), 'YYYYMMDD') || '-' || upper(substr(replace(v_public_id::text, '-', ''), 1, 8));
   v_total NUMERIC(12,2);
+  v_requested_count INTEGER;
 BEGIN
   IF v_phone LIKE '00%' THEN v_phone := '+' || substr(v_phone, 3); END IF;
   IF length(trim(coalesce(p_name, ''))) < 2 OR length(trim(coalesce(p_address, ''))) < 5 THEN RAISE EXCEPTION 'بيانات العميل غير مكتملة'; END IF;
-  IF v_phone !~ '^\\+?[0-9]{7,15}$' THEN RAISE EXCEPTION 'رقم الهاتف غير صحيح'; END IF;
+  IF v_phone !~ '^\+?[0-9]{7,15}$' THEN RAISE EXCEPTION 'رقم الهاتف غير صحيح'; END IF;
   IF jsonb_typeof(p_items) <> 'array' OR jsonb_array_length(p_items) = 0 THEN RAISE EXCEPTION 'السلة فارغة'; END IF;
 
-  WITH requested AS (
+  SELECT count(*) INTO v_requested_count
+  FROM (
+    SELECT product_id
+    FROM jsonb_to_recordset(p_items) AS x(product_id TEXT, quantity INTEGER)
+    WHERE quantity > 0 AND quantity <= 1000 AND product_id IS NOT NULL
+    GROUP BY product_id
+  ) requested;
+  SELECT coalesce(sum(p.unit_price * r.quantity), 0) INTO v_total
+  FROM (
     SELECT product_id, sum(quantity)::INTEGER quantity
     FROM jsonb_to_recordset(p_items) AS x(product_id TEXT, quantity INTEGER)
     WHERE quantity > 0 AND quantity <= 1000 AND product_id IS NOT NULL
     GROUP BY product_id
-  )
-  SELECT coalesce(sum(p.unit_price * r.quantity), 0) INTO v_total FROM requested r JOIN products p ON p.sku = r.product_id AND p.is_active = TRUE;
-  IF v_total = 0 OR (SELECT count(*) FROM requested) <> (SELECT count(*) FROM requested r JOIN products p ON p.sku = r.product_id AND p.is_active = TRUE) THEN RAISE EXCEPTION 'يوجد منتج غير متاح في الطلب'; END IF;
+  ) r JOIN products p ON p.sku = r.product_id AND p.is_active = TRUE;
+  IF v_total = 0 OR v_requested_count <> (
+    SELECT count(*)
+    FROM (
+      SELECT product_id
+      FROM jsonb_to_recordset(p_items) AS x(product_id TEXT, quantity INTEGER)
+      WHERE quantity > 0 AND quantity <= 1000 AND product_id IS NOT NULL
+      GROUP BY product_id
+    ) r JOIN products p ON p.sku = r.product_id AND p.is_active = TRUE
+  ) THEN RAISE EXCEPTION 'يوجد منتج غير متاح في الطلب'; END IF;
 
   INSERT INTO customers(full_name, phone_normalized, address) VALUES(trim(p_name), v_phone, trim(p_address))
   ON CONFLICT(phone_normalized) DO UPDATE SET full_name = EXCLUDED.full_name, address = EXCLUDED.address, updated_at = now()
