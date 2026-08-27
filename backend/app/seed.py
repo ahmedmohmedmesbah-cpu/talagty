@@ -37,5 +37,5 @@ def seed_bootstrap_admin(session: Session) -> None:
     settings = get_settings()
     email = settings.bootstrap_admin_email.strip().lower()
     if session.scalar(select(User.id).where(User.email == email)) is None:
-        session.add(User(email=email, full_name="مدير تلاجتي", password_hash=hash_password(settings.bootstrap_admin_password), role=UserRole.admin))
+        session.add(User(email=email, full_name="مدير تلاجتى", password_hash=hash_password(settings.bootstrap_admin_password), role=UserRole.admin))
         session.commit()

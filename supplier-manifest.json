@@ -1,0 +1,16 @@
+{
+  "name": "مندوب تلاجتى",
+  "short_name": "تلاجتى",
+  "description": "تطبيق المورد لتجهيز وتسليم طلبات تلاجتى",
+  "start_url": "supplier.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0891b2",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    { "src": "assets/لانشون.jpg", "sizes": "any", "type": "image/jpeg", "purpose": "any" }
+  ]
+}

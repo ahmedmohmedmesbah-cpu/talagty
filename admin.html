@@ -2,187 +2,95 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#06b6d4">
     <title>لوحة الإدارة - تلاجتى</title>
-    <style>
-        body {
-            direction: rtl;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 1rem;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 2rem;
-        }
-
-        th, td {
-            border: 1px solid #e5e7eb;
-            padding: 0.75rem;
-            text-align: right;
-        }
-
-        th {
-            background: #f9fafb;
-        }
-
-        .refresh-btn {
-            margin: 1rem 0;
-        }
-
-        h1, h2 {
-            text-align: center;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="admin.css">
 </head>
-<body>
-    <div class="container">
-        <h1>لوحة الإدارة - الطلبات</h1>
-
-        <form id="login-form" style="max-width:420px;margin:1rem auto;display:grid;gap:.75rem">
-            <label>البريد الإلكتروني <input id="admin-email" type="email" required autocomplete="username"></label>
-            <label>كلمة المرور <input id="admin-password" type="password" required autocomplete="current-password"></label>
-            <button class="btn btn-primary" type="submit">تسجيل الدخول</button>
-            <p id="login-status" aria-live="polite"></p>
+<body class="admin-body">
+    <section class="admin-login" id="login-view">
+        <div class="admin-login__brand"><span class="brand-mark">ث</span><div><strong>تلاجتى</strong><small>مركز إدارة التشغيل</small></div></div>
+        <form class="admin-login__card" id="login-form">
+            <span class="eyebrow">دخول آمن</span><h1>مرحباً بعودتك</h1><p>راجع الطلبات الجديدة وأدر المنتجات والموردين من مكان واحد.</p>
+            <label>البريد الإلكتروني<input id="admin-email" type="email" required autocomplete="username" placeholder="admin@example.com"></label>
+            <label>كلمة المرور<input id="admin-password" type="password" required autocomplete="current-password" placeholder="••••••••"></label>
+            <button class="btn btn-primary" type="submit">تسجيل الدخول</button><p class="form-message" id="login-status" aria-live="polite"></p>
         </form>
+    </section>
 
-        <button class="btn btn-primary refresh-btn" id="refresh-orders">تحديث الطلبات</button>
+    <div class="admin-app" id="admin-app" hidden>
+        <aside class="admin-sidebar" id="admin-sidebar">
+            <div class="admin-brand"><span class="brand-mark">ث</span><div><strong>تلاجتى</strong><small>لوحة الإدارة</small></div></div>
+            <nav class="admin-nav" aria-label="أقسام لوحة الإدارة">
+                <button class="admin-nav__item active" data-view="orders"><span>▣</span> الطلبات الجديدة <b id="new-orders-badge">0</b></button>
+                <button class="admin-nav__item" data-view="products"><span>□</span> المنتجات والعروض</button>
+                <button class="admin-nav__item" data-view="categories"><span>◇</span> الفئات</button>
+                <button class="admin-nav__item" data-view="suppliers"><span>♙</span> الموردون</button>
+                <button class="admin-nav__item" data-view="inventory"><span>▤</span> المخزون</button>
+                <button class="admin-nav__item" data-view="reports"><span>↗</span> التقارير</button>
+            </nav>
+            <div class="sidebar-footer"><a href="supplier.html">فتح تطبيق المورد</a><button id="logout-btn">تسجيل الخروج</button></div>
+        </aside>
 
-        <h2>الطلبات الواردة</h2>
-        <table id="orders-table">
-            <thead>
-                <tr>
-                    <th>التاريخ</th>
-                    <th>اسم العميل</th>
-                    <th>رقم الهاتف</th>
-                    <th>العنوان</th>
-                    <th>المحتويات</th>
-                    <th>المجموع</th>
-                    <th>الحالة</th>
-                    <th>إجراء</th>
-                </tr>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
+        <main class="admin-main">
+            <header class="admin-topbar">
+                <button class="mobile-menu" id="mobile-menu" aria-label="فتح القائمة">☰</button>
+                <div><p id="today-label"></p><h1 id="view-title">الطلبات الجديدة</h1></div>
+                <div class="admin-topbar__actions"><button class="icon-button" id="refresh-current" aria-label="تحديث">↻</button><div class="admin-avatar">مد</div></div>
+            </header>
 
+            <section class="admin-view active" id="view-orders">
+                <div class="stats-grid">
+                    <article class="stat-card stat-card--primary"><span>طلبات بانتظار المراجعة</span><strong id="stat-new">0</strong><small>تحتاج اتصالاً بالعميل</small></article>
+                    <article class="stat-card"><span>طلبات قيد التجهيز</span><strong id="stat-preparing">0</strong><small>لدى الموردين الآن</small></article>
+                    <article class="stat-card"><span>خرجت للتوصيل</span><strong id="stat-delivery">0</strong><small>في الطريق للعملاء</small></article>
+                    <article class="stat-card"><span>مبيعات مكتملة</span><strong id="stat-sales">0 ج.م</strong><small>إجمالي الطلبات المكتملة</small></article>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><div><h2>قائمة الطلبات</h2><p>راجع بيانات العميل قبل الموافقة والإسناد.</p></div><div class="filters"><input id="order-search" type="search" placeholder="ابحث بالاسم أو الهاتف أو رقم الطلب"><select id="order-filter"><option value="">كل الحالات</option><option value="pending_assignment">بانتظار المراجعة</option><option value="deferred_review">مؤجل للمراجعة</option><option value="approved">تمت الموافقة</option><option value="assigned">تم الإسناد</option><option value="preparing">قيد التجهيز</option><option value="out_for_delivery">خرج للتوصيل</option><option value="completed">مكتمل</option></select></div></div>
+                    <div class="orders-list" id="orders-list"><div class="empty-state">جاري تحميل الطلبات...</div></div>
+                </div>
+            </section>
+
+            <section class="admin-view" id="view-products">
+                <div class="section-toolbar"><div><h2>المنتجات والعروض</h2><p>تحكم في الاسم والسعر والصورة والمخزون والعروض.</p></div><div class="toolbar-actions"><button class="btn btn-primary" data-open-modal="product-modal">+ إضافة منتج</button><button class="btn btn-sale" data-open-modal="sale-modal">+ إضافة عرض</button></div></div>
+                <section class="sales-preview" aria-labelledby="sales-preview-title"><div class="sales-preview__head"><div><span class="eyebrow">معاينة مباشرة</span><h3 id="sales-preview-title">العروض المطبقة</h3></div><span id="sales-count" class="sales-count">0 عروض</span></div><div class="sales-preview-grid" id="sales-preview-grid"><div class="empty-state">لا توجد عروض مطبقة حالياً.</div></div></section>
+                <div class="panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>المنتج</th><th>الفئة</th><th>السعر</th><th>العرض</th><th>المخزون</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="products-body"></tbody></table></div></div>
+            </section>
+
+            <section class="admin-view" id="view-categories">
+                <div class="section-toolbar"><div><h2>فئات المنتجات</h2><p>أضف الفئات ورتّب ظهورها في المتجر.</p></div><button class="btn btn-primary" data-open-modal="category-modal">+ إضافة فئة</button></div>
+                <div class="category-admin-grid" id="categories-grid"></div>
+            </section>
+
+            <section class="admin-view" id="view-suppliers">
+                <div class="section-toolbar"><div><h2>الموردون</h2><p>أنشئ حساب المورد واربطه بهاتف واحد بعد التفعيل.</p></div><button class="btn btn-primary" data-open-modal="supplier-modal">+ أضف مندوب</button></div>
+                <div class="panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>المورد</th><th>الهاتف</th><th>المركبة</th><th>التفعيل</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="suppliers-body"></tbody></table></div></div>
+            </section>
+
+            <section class="admin-view" id="view-inventory">
+                <div class="section-toolbar"><div><h2>المخزون المركزي</h2><p>أي شراء يزيد الرصيد، وإتمام البيع يخصمه تلقائياً.</p></div><button class="btn btn-primary" data-open-modal="stock-modal">+ تسجيل حركة مخزون</button></div>
+                <div class="stats-grid stats-grid--compact"><article class="stat-card"><span>إجمالي الوحدات</span><strong id="inventory-total">0</strong></article><article class="stat-card"><span>منخفض المخزون</span><strong id="inventory-low">0</strong></article></div>
+                <div class="panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>المنتج</th><th>الكمية الحالية</th><th>حد التنبيه</th><th>آخر تحديث</th><th>إجراء</th></tr></thead><tbody id="inventory-body"></tbody></table></div></div>
+            </section>
+
+            <section class="admin-view" id="view-reports">
+                <div class="section-toolbar"><div><h2>التقارير</h2><p>ملخص قابل للطباعة عن الطلبات والمبيعات والتوقيتات.</p></div><button class="btn btn-primary" id="print-report">طباعة التقرير</button></div>
+                <div class="stats-grid"><article class="stat-card"><span>الطلبات المكتملة</span><strong id="report-completed">0</strong></article><article class="stat-card"><span>إجمالي المبيعات</span><strong id="report-sales">0 ج.م</strong></article><article class="stat-card"><span>متوسط قيمة الطلب</span><strong id="report-average">0 ج.م</strong></article></div>
+                <div class="panel"><h2>سجل الطلبات المكتملة</h2><div id="completed-orders" class="orders-list"></div></div>
+            </section>
+        </main>
     </div>
 
-    <script src="api-config.js"></script>
-    <script>
-        const apiBaseUrl = (window.TALLAGTY_API_BASE_URL || '').replace(/\/$/, '');
-        let accessToken = sessionStorage.getItem('tallagtyAdminToken') || '';
-        const statusLabels = {
-            pending_assignment: 'بانتظار التجهيز',
-            preparing: 'قيد التجهيز',
-            out_for_delivery: 'خرج للتوصيل',
-            completed: 'مكتمل',
-            cancelled: 'ملغي'
-        };
-        const nextStatuses = {
-            pending_assignment: ['preparing', 'cancelled'],
-            preparing: ['out_for_delivery', 'cancelled'],
-            out_for_delivery: ['completed'],
-            completed: [],
-            cancelled: []
-        };
+    <div class="modal-shell" id="order-modal" hidden><div class="modal-card modal-card--wide"><button class="modal-close" data-close-modal>×</button><div id="order-modal-content"></div></div></div>
+    <div class="modal-shell" id="product-modal" hidden><form class="modal-card" id="product-form"><button type="button" class="modal-close" data-close-modal>×</button><h2 id="product-modal-title">إضافة منتج جديد</h2><input type="hidden" id="product-id"><div class="form-grid"><label>كود المنتج<input id="product-sku" required maxlength="32"></label><label>اسم المنتج<input id="product-name" required></label><label class="span-2">الوصف<textarea id="product-description" rows="2"></textarea></label><label>الفئة<select id="product-category"></select></label><label>السعر الأساسي<input id="product-price" type="number" min="0" step="0.01" required></label><label class="span-2">رابط الصورة من Google Drive أو أي رابط عام<input id="product-image" type="url" placeholder="https://..."></label><label>الكمية الحالية<input id="product-stock" type="number" min="0" value="0"></label><label>حد تنبيه المخزون<input id="product-low-stock" type="number" min="0" value="5"></label><label class="check-label span-2"><input id="product-active" type="checkbox" checked> المنتج ظاهر ومتاح في المتجر</label></div><button class="btn btn-primary" type="submit">حفظ المنتج</button><p class="form-message" aria-live="polite"></p></form></div>
+    <div class="modal-shell" id="sale-modal" hidden><form class="modal-card" id="sale-form"><button type="button" class="modal-close" data-close-modal>×</button><h2 id="sale-modal-title">إضافة عرض جديد</h2><p class="hint">اختر المنتج وحدد الخصم. ستظهر المعاينة للعميل عند بدء العرض.</p><label>المنتج<select id="sale-product" required></select></label><div class="form-grid"><label>نوع العرض<select id="sale-type" required><option value="percentage">نسبة خصم</option><option value="fixed">سعر مخفض ثابت</option></select></label><label>قيمة العرض<input id="sale-value" type="number" min="0.01" step="0.01" required></label><label>بداية العرض (اختياري)<input id="sale-start" type="datetime-local"></label><label>نهاية العرض (اختياري)<input id="sale-end" type="datetime-local"></label></div><div class="sale-form-actions"><button class="btn btn-primary" type="submit">حفظ العرض</button><button class="btn btn-secondary" id="remove-sale" type="button" hidden>إيقاف العرض</button></div><p class="form-message" aria-live="polite"></p></form></div>
+    <div class="modal-shell" id="category-modal" hidden><form class="modal-card" id="category-form"><button type="button" class="modal-close" data-close-modal>×</button><h2>بيانات الفئة</h2><input type="hidden" id="category-id"><label>اسم الفئة<input id="category-name" required></label><label>الرابط المختصر<input id="category-slug" required pattern="[a-z0-9-]+" dir="ltr"></label><label>الوصف<textarea id="category-description" rows="2"></textarea></label><label>رابط الصورة<input id="category-image" type="url"></label><label>ترتيب الظهور<input id="category-sort" type="number" min="0" value="0"></label><label class="check-label"><input id="category-active" type="checkbox" checked> الفئة ظاهرة</label><button class="btn btn-primary" type="submit">حفظ الفئة</button><p class="form-message" aria-live="polite"></p></form></div>
+    <div class="modal-shell" id="supplier-modal" hidden><form class="modal-card" id="supplier-form"><button type="button" class="modal-close" data-close-modal>×</button><h2>إضافة مندوب مورد</h2><div class="form-grid"><label>الاسم الكامل<input id="supplier-name" required></label><label>رقم الهاتف<input id="supplier-phone" type="tel" required></label><label>البريد الإلكتروني (اختياري)<input id="supplier-email" type="email"></label><label>كلمة المرور المؤقتة<input id="supplier-password" type="password" minlength="8" required></label><label>الرقم القومي<input id="supplier-national-id" required></label><label>بيانات المركبة<input id="supplier-vehicle" placeholder="النوع - اللون - رقم اللوحة" required></label></div><p class="hint">سيظهر رمز تفعيل لمرة واحدة بعد إنشاء الحساب. لاحقاً يمكن إرساله تلقائياً عبر SMS.</p><button class="btn btn-primary" type="submit">إنشاء الحساب</button><p class="form-message" aria-live="polite"></p></form></div>
+    <div class="modal-shell" id="stock-modal" hidden><form class="modal-card" id="stock-form"><button type="button" class="modal-close" data-close-modal>×</button><h2>تسجيل حركة مخزون</h2><label>المنتج<select id="stock-product" required></select></label><label>نوع الحركة<select id="stock-type"><option value="purchase">شراء وإضافة</option><option value="adjustment_add">تسوية بالزيادة</option><option value="adjustment_remove">تسوية بالنقص</option><option value="return">مرتجع</option></select></label><label>الكمية<input id="stock-quantity" type="number" min="1" required></label><label>ملاحظة<textarea id="stock-note" rows="2"></textarea></label><button class="btn btn-primary" type="submit">حفظ الحركة</button><p class="form-message" aria-live="polite"></p></form></div>
 
-        function requestOptions(method = 'GET', body) {
-            const headers = { Authorization: `Bearer ${accessToken}` };
-            if (body) headers['Content-Type'] = 'application/json';
-            return { method, headers, body: body ? JSON.stringify(body) : undefined };
-        }
-
-        async function fetchOrders() {
-            const tbody = document.getElementById('orders-table').querySelector('tbody');
-            tbody.innerHTML = '<tr><td colspan="8">جاري تحميل الطلبات...</td></tr>';
-            if (!accessToken) {
-                tbody.innerHTML = '<tr><td colspan="8">سجّل الدخول أولاً لعرض الطلبات.</td></tr>';
-                return;
-            }
-
-            try {
-                const response = await fetch(`${apiBaseUrl}/api/admin/orders`, requestOptions());
-                if (!response.ok) {
-                    if (response.status === 401) sessionStorage.removeItem('tallagtyAdminToken');
-                    throw new Error('تعذر تحميل الطلبات. تأكد من تسجيل الدخول وإعداد رابط الخدمة.');
-                }
-                const orders = await response.json();
-
-                tbody.innerHTML = ''; // Clear the table body
-
-                if (!orders || orders.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8">لا توجد طلبات حتى الآن.</td></tr>';
-                    return;
-                }
-
-                orders.forEach(order => {
-                    const tr = document.createElement('tr');
-                    const cells = [
-                        order.created_at ? new Date(order.created_at).toLocaleString('ar-EG') : '—',
-                        order.customer_name || '—', order.customer_phone || '—',
-                        order.customer_address_text || '—',
-                        (order.items || []).map(item => `${item.name} × ${item.quantity}`).join('، '),
-                        `${order.total} ريال`, statusLabels[order.status] || order.status
-                    ];
-                    cells.forEach(text => { const cell = document.createElement('td'); cell.textContent = text; tr.appendChild(cell); });
-                    const actionCell = document.createElement('td');
-                    const choices = nextStatuses[order.status] || [];
-                    if (!choices.length) actionCell.textContent = '—';
-                    choices.forEach(nextStatus => {
-                        const button = document.createElement('button');
-                        button.className = 'btn btn-primary';
-                        button.style.margin = '.15rem';
-                        button.textContent = statusLabels[nextStatus];
-                        button.addEventListener('click', () => updateOrderStatus(order.order_id, nextStatus));
-                        actionCell.appendChild(button);
-                    });
-                    tr.appendChild(actionCell);
-                    tbody.appendChild(tr);
-                });
-
-            } catch (error) {
-                console.error('Error fetching orders:', error);
-                tbody.innerHTML = `<tr><td colspan="8">${error.message}</td></tr>`;
-            }
-        }
-
-        async function updateOrderStatus(orderId, nextStatus) {
-            try {
-                const response = await fetch(`${apiBaseUrl}/api/admin/orders/${encodeURIComponent(orderId)}/status`, requestOptions('PATCH', { status: nextStatus }));
-                if (!response.ok) throw new Error('تعذر تحديث حالة الطلب.');
-                fetchOrders();
-            } catch (error) { alert(error.message); }
-        }
-
-        document.getElementById('refresh-orders').addEventListener('click', () => {
-            fetchOrders();
-        });
-
-        document.getElementById('login-form').addEventListener('submit', async event => {
-            event.preventDefault();
-            const statusEl = document.getElementById('login-status');
-            try {
-                const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: document.getElementById('admin-email').value, password: document.getElementById('admin-password').value })
-                });
-                const data = await response.json();
-                if (!response.ok || data.role !== 'admin') throw new Error(data.detail || 'بيانات الدخول غير صحيحة');
-                accessToken = data.access_token;
-                sessionStorage.setItem('tallagtyAdminToken', accessToken);
-                statusEl.textContent = 'تم تسجيل الدخول بنجاح.';
-                fetchOrders();
-            } catch (error) { statusEl.textContent = error.message; }
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchOrders();
-        });
-    </script>
+    <div class="toast" id="admin-toast" role="status" aria-live="polite"></div>
+    <script src="api-config.js"></script><script src="admin.js"></script>
 </body>
 </html>

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#06b6d4"><title>متابعة فاتورتك - تلاجتى</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="track.css"></head>
+<body class="track-body">
+    <header class="track-header"><a href="index.html" class="track-brand"><span>ث</span><strong>تلاجتى</strong></a><a href="index.html">العودة للمتجر</a></header>
+    <main class="track-main">
+        <section class="track-hero"><span>متابعة الطلب</span><h1>فاتورتك لحظة بلحظة</h1><p>أدخل رقم الهاتف المستخدم في الطلب لعرض جميع طلباتك الحالية والسابقة.</p><form id="track-form"><input id="track-phone" type="tel" inputmode="tel" required placeholder="رقم الهاتف"><button type="submit">عرض طلباتي</button></form><p id="track-message" aria-live="polite"></p></section>
+        <section class="track-list" id="track-list"></section>
+    </main>
+    <div class="receipt-modal" id="receipt-modal" hidden><div class="receipt-card"><button id="close-receipt">×</button><span>تأكيد استلام آمن</span><h2>اعرض الرمز للمورد</h2><p>سيظل الرمز صالحاً لمدة خمس دقائق ويُستخدم مرة واحدة فقط.</p><div id="receipt-qr" class="receipt-qr"></div><div class="receipt-code"><small>الرمز الاحتياطي</small><strong id="manual-code">--------</strong></div><p id="receipt-countdown"></p></div></div>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="api-config.js"></script><script src="track.js"></script>
+</body></html>

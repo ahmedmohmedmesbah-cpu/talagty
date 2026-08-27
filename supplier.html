@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0891b2">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="مندوب تلاجتى">
+    <title>تطبيق مورد تلاجتى</title>
+    <link rel="manifest" href="supplier-manifest.json">
+    <link rel="apple-touch-icon" href="assets/لانشون.jpg">
+    <link rel="stylesheet" href="supplier.css">
+</head>
+<body>
+    <section class="supplier-auth" id="supplier-auth">
+        <div class="supplier-logo"><span>ث</span><div><strong>مندوب تلاجتى</strong><small>طلباتك في مكان واحد</small></div></div>
+        <div class="auth-card">
+            <div class="auth-tabs"><button class="active" data-auth-tab="login">تسجيل الدخول</button><button data-auth-tab="activate">تفعيل أول مرة</button></div>
+            <form id="supplier-login-form" class="auth-form active">
+                <h1>ابدأ يومك</h1><p>سجّل الدخول من الهاتف الذي تم تفعيل الحساب عليه.</p>
+                <label>رقم الهاتف<input id="login-phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="01xxxxxxxxx"></label>
+                <label>كلمة المرور<input id="login-password" type="password" autocomplete="current-password" required></label>
+                <button type="submit">دخول</button><p class="form-message" aria-live="polite"></p>
+            </form>
+            <form id="supplier-activate-form" class="auth-form">
+                <h1>تفعيل الهاتف</h1><p>أدخل رمز التفعيل الذي استلمته من الإدارة. هذا الحساب سيعمل على هذا الهاتف فقط.</p>
+                <label>رقم الهاتف<input id="activate-phone" type="tel" inputmode="tel" required></label>
+                <label>كلمة المرور<input id="activate-password" type="password" required></label>
+                <label>رمز التفعيل<input id="activation-code" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required placeholder="000000"></label>
+                <button type="submit">تفعيل الهاتف</button><p class="form-message" aria-live="polite"></p>
+            </form>
+        </div>
+    </section>
+
+    <div class="supplier-app" id="supplier-app" hidden>
+        <header class="supplier-header">
+            <div class="supplier-logo supplier-logo--small"><span>ث</span><div><strong>مندوب تلاجتى</strong><small id="connection-status">متصل</small></div></div>
+            <div class="header-actions"><button id="install-app" hidden>تثبيت التطبيق</button><button class="notification-button" id="notifications-button" aria-label="الإشعارات">♢<b id="notifications-count">0</b></button></div>
+        </header>
+        <main class="supplier-main">
+            <section class="welcome-card"><div><small>صباح الخير</small><h1>طلبات اليوم</h1><p>راجع تفاصيل العميل قبل بدء التجهيز.</p></div><strong id="active-count">0</strong></section>
+            <div class="supplier-tabs"><button class="active" data-order-tab="active">الطلبات الحالية</button><button data-order-tab="completed">المكتملة</button></div>
+            <section class="supplier-orders" id="supplier-orders"><div class="loading-card">جاري تحميل الطلبات...</div></section>
+        </main>
+        <nav class="bottom-nav"><button class="active" data-bottom="orders"><span>▣</span>الطلبات</button><button data-bottom="scan" id="quick-scan"><span>⌗</span>تسليم أوردر</button><button data-bottom="profile"><span>♙</span>حسابي</button></nav>
+    </div>
+
+    <div class="sheet-overlay" id="order-sheet" hidden><article class="bottom-sheet"><button class="sheet-close" data-close-sheet>×</button><div id="supplier-order-detail"></div></article></div>
+    <div class="sheet-overlay" id="notifications-sheet" hidden><article class="bottom-sheet"><button class="sheet-close" data-close-sheet>×</button><h2>الإشعارات</h2><div id="notifications-list" class="notification-list"></div></article></div>
+    <div class="scanner-overlay" id="scanner-overlay" hidden>
+        <div class="scanner-card"><button class="sheet-close" id="close-scanner">×</button><h2>مسح رمز استلام الطلبية</h2><p>وجّه الكاميرا نحو رمز QR الظاهر على هاتف العميل.</p><div class="camera-frame"><video id="scanner-video" playsinline muted></video><div class="scan-line"></div></div><p id="scanner-status">جاري تشغيل الكاميرا...</p><div class="manual-code"><span>أو أدخل رمز التسليم الاحتياطي</span><input id="manual-delivery-code" inputmode="numeric" placeholder="رمز التسليم"><button id="confirm-manual-code">تأكيد</button></div></div>
+    </div>
+    <div class="supplier-toast" id="supplier-toast" role="status" aria-live="polite"></div>
+    <script src="api-config.js"></script><script src="supplier.js"></script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 // FINAL SCRIPT - PDF Feature Removed for Simplicity
 document.addEventListener('DOMContentLoaded', () => {
 
-    const PRODUCTS_DATA = [
+    let PRODUCTS_DATA = [
         { id: 'mc1', name: 'حليب كامل الدسم', price: 18.00, imageUrl: 'https://picsum.photos/400/400?random=30' },
         { id: 'mc2', name: 'قشدة طازجة', price: 22.00, imageUrl: 'https://picsum.photos/400/400?random=31' },
         { id: 'ch1', name: 'جبن شيدر', price: 40.00, imageUrl: 'https://picsum.photos/400/400?random=33' },
@@ -15,9 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'ln7', name: 'لانشون ساده', price: 44.00, imageUrl: 'assets/لانشون ساده.jpg' },
         { id: 'ln8', name: 'لانشون ديك رومى', price: 49.00, imageUrl: 'assets/لانشون ديك رومى.jpg' }
     ];
-    const PRODUCTS_MAP = Object.fromEntries(PRODUCTS_DATA.map(p => [p.id, p]));
+    let PRODUCTS_MAP = Object.fromEntries(PRODUCTS_DATA.map(p => [p.id, p]));
     const ORDER_API_BASE_URL = (window.TALLAGTY_API_BASE_URL || '').replace(/\/$/, '');
-    const currencyFmt = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' });
+    const currencyFmt = new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' });
 
     const cartSidebar = document.getElementById('cart-sidebar');
     const cartOverlay = document.getElementById('cart-overlay');
@@ -89,6 +89,48 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         updateCartInfo();
+    };
+
+    const loadLiveCatalog = async () => {
+        if (!ORDER_API_BASE_URL) return;
+        try {
+            const response = await fetch(`${ORDER_API_BASE_URL}/api/catalog`);
+            if (!response.ok) return;
+            const catalog = await response.json();
+            PRODUCTS_DATA = (catalog.products || []).map(product => ({
+                id: product.sku,
+                name: product.name_ar,
+                description: product.description_ar || '',
+                price: Number(product.effective_price ?? product.unit_price),
+                originalPrice: Number(product.unit_price),
+                imageUrl: product.image_url || 'assets/لانشون.jpg',
+                categorySlug: product.category_slug,
+                stock: Number(product.available_stock ?? product.stock_quantity ?? 0)
+            }));
+            PRODUCTS_MAP = Object.fromEntries(PRODUCTS_DATA.map(product => [product.id, product]));
+            cart = cart.filter(item => PRODUCTS_MAP[item.id]);
+            saveCart();
+            const pageCategory = { 'category1.html': 'dairy', 'category2.html': 'cheese', 'category3.html': 'luncheon' }[location.pathname.split('/').pop()];
+            const grid = document.querySelector('.product-grid');
+            if (grid && pageCategory) {
+                const products = PRODUCTS_DATA.filter(product => product.categorySlug === pageCategory);
+                grid.innerHTML = products.length ? products.map(product => `
+                    <article class="product-card">
+                        <img src="${product.imageUrl}" alt="${product.name}" class="product-card__image">
+                        <div class="product-card__content">
+                            <h3 class="product-card__title">${product.name}</h3>
+                            <p class="product-card__desc">${product.description}</p>
+                            <div class="product-card__footer">
+                                <span class="product-card__price">${product.originalPrice !== product.price ? `<small style="display:block;text-decoration:line-through;color:#6b7280">${currencyFmt.format(product.originalPrice)}</small>` : ''}${currencyFmt.format(product.price)}</span>
+                                <button class="btn btn-primary product-card__btn add-to-cart-btn" data-product-id="${product.id}" ${product.stock <= 0 ? 'disabled' : ''}>${product.stock <= 0 ? 'غير متوفر' : 'أضف إلى السلة'}</button>
+                            </div>
+                        </div>
+                    </article>`).join('') : '<p class="cart-sidebar__empty">لا توجد منتجات متاحة في هذه الفئة.</p>';
+            }
+            renderCart();
+        } catch (error) {
+            console.warn('تعذر تحميل الكتالوج المباشر، سيتم عرض النسخة المحفوظة.', error);
+        }
     };
 
     const addToCart = (productId) => {
@@ -288,4 +330,5 @@ document.addEventListener('DOMContentLoaded', () => {
     setupCartFooter();
     renderCart();
     createCheckoutSidebar();
+    loadLiveCatalog();
 });
