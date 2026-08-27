@@ -55,7 +55,7 @@ function validateProductInput(body: any) {
   const saleValue = Number(body.sale_value || 0)
   const saleStart = body.sale_start ? new Date(body.sale_start) : null
   const saleEnd = body.sale_end ? new Date(body.sale_end) : null
-  if (!sku || !/^[A-Za-z0-9_-]{1,32}$/.test(sku)) return 'كود المنتج غير صحيح'
+  if (!sku || sku.length > 32 || /[\u0000-\u001f]/.test(sku)) return 'كود المنتج غير صحيح'
   if (name.length < 2) return 'اسم المنتج يجب ألا يقل عن حرفين'
   if (!Number.isFinite(price) || price <= 0) return 'السعر الأساسي يجب أن يكون أكبر من صفر'
   if (!['none', 'percentage', 'fixed'].includes(saleType)) return 'نوع العرض غير صحيح'
@@ -139,6 +139,20 @@ async function ensureBootstrapAdmin() {
 
 function relationOne(value: any) {
   return Array.isArray(value) ? value[0] : value
+}
+
+function databaseMessage(error: any, entity: 'product' | 'supplier') {
+  const code = String(error?.code || '')
+  const details = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
+  if (code === '23505') {
+    if (details.includes('products_sku')) return 'كود المنتج مستخدم بالفعل. اترك خانة الكود فارغة لإنشاء كود تلقائي.'
+    if (details.includes('phone_normalized')) return 'رقم الهاتف مرتبط بحساب موجود بالفعل.'
+    if (details.includes('national_id')) return 'الرقم القومي مرتبط بمندوب موجود بالفعل.'
+    if (details.includes('email')) return 'البريد الإلكتروني مرتبط بحساب موجود بالفعل.'
+    return entity === 'product' ? 'هذا المنتج موجود بالفعل.' : 'بيانات هذا المندوب مستخدمة في حساب موجود.'
+  }
+  if (code === '23514') return entity === 'product' ? 'بيانات السعر أو العرض أو المخزون غير صحيحة.' : 'بيانات المندوب غير مكتملة.'
+  return entity === 'product' ? 'تعذر حفظ المنتج. راجع البيانات وحاول مرة أخرى.' : 'تعذر إنشاء حساب المندوب. راجع البيانات وحاول مرة أخرى.'
 }
 
 function htmlEscape(value: unknown) {
@@ -358,7 +372,7 @@ Deno.serve(async (request) => {
         if (validationError) return apiError(request, validationError, 422)
         const row = { sku: String(body.sku ?? '').trim(), name_ar: String(body.name_ar ?? '').trim(), description_ar: String(body.description_ar ?? '').trim() || null, category_id: body.category_id || null, unit_price: Number(body.unit_price), image_url: normalizeDriveUrl(body.image_url), sale_type: body.sale_type || 'none', sale_value: Number(body.sale_value || 0), sale_start: body.sale_start || null, sale_end: body.sale_end || null, stock_quantity: Number(body.stock_quantity || 0), low_stock_threshold: Number(body.low_stock_threshold || 0), is_active: body.is_active !== false }
         const { data, error } = await admin.from('products').insert(row).select().single()
-        if (error) return apiError(request, error.message, 422)
+        if (error) return apiError(request, databaseMessage(error, 'product'), 422)
         if (row.stock_quantity > 0) await admin.from('inventory_movements').insert({ product_id: data.id, movement_type: 'purchase', quantity_delta: row.stock_quantity, balance_after: row.stock_quantity, note: 'رصيد افتتاحي', created_by: claims.sub })
         return response(request, data, 201)
       }
@@ -397,14 +411,28 @@ Deno.serve(async (request) => {
       if (request.method === 'POST' && route === '/api/admin/suppliers') {
         const body = await parseBody(request)
         const phone = normalizePhone(body.phone)
+        const fullName = String(body.full_name ?? '').trim()
+        const nationalId = String(body.national_id ?? '').trim()
+        const vehicleDetails = String(body.vehicle_details ?? '').trim()
+        const email = String(body.email ?? '').trim().toLowerCase()
+        if (fullName.length < 2) return apiError(request, 'الاسم الكامل غير صحيح', 422)
         if (!/^\+?[0-9]{7,15}$/.test(phone)) return apiError(request, 'رقم الهاتف غير صحيح', 422)
         if (String(body.password ?? '').length < 8) return apiError(request, 'كلمة المرور يجب ألا تقل عن 8 أحرف', 422)
+        if (!nationalId || !vehicleDetails) return apiError(request, 'الرقم القومي وبيانات المركبة مطلوبان', 422)
+        const { data: phoneOwner } = await admin.from('users').select('id').eq('phone_normalized', phone).maybeSingle()
+        if (phoneOwner) return apiError(request, 'رقم الهاتف مرتبط بحساب موجود بالفعل', 409)
+        if (email) {
+          const { data: emailOwner } = await admin.from('users').select('id').eq('email', email).maybeSingle()
+          if (emailOwner) return apiError(request, 'البريد الإلكتروني مرتبط بحساب موجود بالفعل', 409)
+        }
+        const { data: nationalIdOwner } = await admin.from('suppliers').select('id').eq('national_id', nationalId).maybeSingle()
+        if (nationalIdOwner) return apiError(request, 'الرقم القومي مرتبط بمندوب موجود بالفعل', 409)
         const activationCode = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0')
         const passwordHash = await bcrypt.hash(String(body.password), 12)
-        const { data: user, error: userError } = await admin.from('users').insert({ email: String(body.email ?? '').trim().toLowerCase() || null, phone_normalized: phone, full_name: String(body.full_name ?? '').trim(), password_hash: passwordHash, role: 'supplier', is_active: true, activation_code_hash: await sha256(activationCode), activation_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }).select('id,full_name').single()
-        if (userError) return apiError(request, userError.code === '23505' ? 'رقم الهاتف أو البريد مستخدم من قبل' : 'تعذر إنشاء حساب المورد', 422)
-        const { data: supplier, error: supplierError } = await admin.from('suppliers').insert({ user_id: user.id, business_name: String(body.business_name || body.full_name).trim(), national_id: String(body.national_id ?? '').trim(), vehicle_details: String(body.vehicle_details ?? '').trim(), is_available: true }).select().single()
-        if (supplierError) { await admin.from('users').delete().eq('id', user.id); return apiError(request, 'تعذر حفظ بيانات المورد', 422) }
+        const { data: user, error: userError } = await admin.from('users').insert({ email: email || null, phone_normalized: phone, full_name: fullName, password_hash: passwordHash, role: 'supplier', is_active: true, activation_code_hash: await sha256(activationCode), activation_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }).select('id,full_name').single()
+        if (userError) return apiError(request, databaseMessage(userError, 'supplier'), 422)
+        const { data: supplier, error: supplierError } = await admin.from('suppliers').insert({ user_id: user.id, business_name: String(body.business_name || fullName).trim(), national_id: nationalId, vehicle_details: vehicleDetails, is_available: true }).select().single()
+        if (supplierError) { await admin.from('users').delete().eq('id', user.id); return apiError(request, databaseMessage(supplierError, 'supplier'), 422) }
         return response(request, { supplier_id: supplier.id, full_name: user.full_name, activation_code: activationCode, activation_expires_in_hours: 24 }, 201)
       }
       const resetDeviceMatch = route.match(/^\/api\/admin\/suppliers\/(\d+)\/reset-device$/)
