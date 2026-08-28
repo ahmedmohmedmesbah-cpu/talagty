@@ -3,6 +3,7 @@
     const apiBase = (window.TALLAGTY_API_BASE_URL || '').replace(/\/$/, '');
     let token = sessionStorage.getItem('tallagtyAdminToken') || '';
     let currentView = 'orders';
+    let categoryManageMode = false;
     const state = { orders: [], products: [], categories: [], suppliers: [], movements: [] };
     const previewMode = ['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).has('preview');
     const money = new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP', maximumFractionDigits: 2 });
@@ -102,7 +103,17 @@
             return `<article class="sale-preview-card"><img src="${escapeHtml(normalizeDriveUrl(product.image_url) || fallbackImage)}" alt="${escapeHtml(product.name_ar)}"><div class="sale-preview-card__body"><h4>${escapeHtml(product.name_ar)}</h4><div class="sale-preview-card__price"><span class="old-price">${money.format(Number(product.unit_price || 0))}</span><strong class="sale-price">${money.format(salePrice(product))}</strong></div><span class="sale-preview-card__meta">${escapeHtml(effectiveSale(product))} · ${escapeHtml(period)}</span><footer><span class="sale-state ${status.className}">${status.label}</span><button class="small-btn" data-edit-sale="${product.id}">تعديل العرض</button></footer></div></article>`;
         }).join('') : '<div class="empty-state">لا توجد عروض مطبقة حالياً. اضغط «إضافة عرض» لإنشاء أول عرض.</div>';
     }
-    function renderCategories() { $('categories-grid').innerHTML = state.categories.length ? state.categories.map(category => `<article class="category-admin-card ${category.image_url ? 'has-image' : ''}" ${category.image_url ? `style="background-image:url('${escapeHtml(normalizeDriveUrl(category.image_url))}')"` : ''}><h3>${escapeHtml(category.name_ar)}</h3><p>${escapeHtml(category.description_ar || 'بدون وصف')}</p><footer><span>${category.is_active ? 'ظاهرة' : 'مخفية'} · ترتيب ${category.sort_order || 0}</span><button class="small-btn" data-edit-category="${category.id}">تعديل</button></footer></article>`).join('') : '<div class="empty-state">لا توجد فئات.</div>'; }
+    function renderCategories() {
+        $('category-manage-toggle').textContent = categoryManageMode ? 'إنهاء التعديل' : 'تعديل الفئات';
+        $('category-manage-toggle').classList.toggle('btn-primary', categoryManageMode);
+        $('category-manage-toggle').classList.toggle('btn-secondary', !categoryManageMode);
+        $('category-management-note').hidden = !categoryManageMode;
+        $('categories-grid').innerHTML = state.categories.length ? state.categories.map(category => {
+            const productsCount = state.products.filter(product => Number(product.category_id) === Number(category.id)).length;
+            const actions = categoryManageMode ? `<div class="category-card-actions"><button class="small-btn primary" data-edit-category="${category.id}">تعديل البيانات</button><button class="small-btn danger" data-delete-category="${category.id}">حذف</button></div>` : '';
+            return `<article class="category-admin-card ${category.image_url ? 'has-image' : ''}" ${category.image_url ? `style="background-image:url('${escapeHtml(normalizeDriveUrl(category.image_url))}')"` : ''}><h3>${escapeHtml(category.name_ar)}</h3><p>${escapeHtml(category.description_ar || 'بدون وصف')}</p><footer><span>${category.is_active ? 'ظاهرة' : 'مخفية'} · ترتيب ${category.sort_order || 0} · ${productsCount} منتج</span>${actions}</footer></article>`;
+        }).join('') : '<div class="empty-state">لا توجد فئات. استخدم زر «إضافة فئة» لإنشاء أول فئة.</div>';
+    }
     function renderSuppliers() { $('suppliers-body').innerHTML = state.suppliers.length ? state.suppliers.map(supplier => `<tr><td><strong>${escapeHtml(supplier.full_name)}</strong><br><small>${escapeHtml(supplier.email || 'بدون بريد')}</small></td><td>${escapeHtml(supplier.phone || '—')}</td><td>${escapeHtml(supplier.vehicle_details || '—')}</td><td>${supplier.is_activated ? '<span class="status-pill status-completed">مفعّل</span>' : '<span class="status-pill status-pending_assignment">بانتظار التفعيل</span>'}</td><td>${supplier.is_available ? 'متاح' : 'غير متاح'}</td><td><button class="small-btn primary" data-reset-device="${supplier.supplier_id}">إعادة ربط الهاتف</button></td></tr>`).join('') : '<tr><td colspan="6" class="empty-state">لم تتم إضافة موردين بعد.</td></tr>'; }
     function renderInventory() {
         const total = state.products.reduce((sum, product) => sum + Number(product.stock_quantity || 0), 0), low = state.products.filter(product => Number(product.stock_quantity || 0) <= Number(product.low_stock_threshold || 0)).length;
@@ -169,7 +180,8 @@
     }
     function editProduct(id) { const product = state.products.find(item => Number(item.id) === Number(id)); if (!product) return; $('product-form').reset(); $('product-modal-title').textContent = 'تعديل بيانات المنتج'; $('product-id').value = product.id; $('product-sku').value = product.sku; $('product-name').value = product.name_ar; $('product-description').value = product.description_ar || ''; $('product-category').value = product.category_id || ''; $('product-price').value = product.unit_price; $('product-image').value = product.image_url || ''; $('product-stock').value = product.stock_quantity || 0; $('product-low-stock').value = product.low_stock_threshold || 0; $('product-active').checked = product.is_active; openModal('product-modal'); }
     function editSale(id) { const product = state.products.find(item => Number(item.id) === Number(id)); if (!product) return; $('sale-form').reset(); $('sale-modal-title').textContent = 'تعديل العرض'; $('sale-product').value = product.id; $('sale-product').disabled = true; $('sale-type').value = product.sale_type === 'fixed' ? 'fixed' : 'percentage'; $('sale-value').value = product.sale_value || ''; $('sale-start').value = localDateTimeValue(product.sale_start); $('sale-end').value = localDateTimeValue(product.sale_end); $('remove-sale').hidden = false; openModal('sale-modal'); }
-    function editCategory(id) { const category = state.categories.find(item => Number(item.id) === Number(id)); if (!category) return; $('category-id').value = category.id; $('category-name').value = category.name_ar; $('category-slug').value = category.slug; $('category-description').value = category.description_ar || ''; $('category-image').value = category.image_url || ''; $('category-sort').value = category.sort_order || 0; $('category-active').checked = category.is_active; openModal('category-modal'); }
+    function editCategory(id) { const category = state.categories.find(item => Number(item.id) === Number(id)); if (!category) return; $('category-form').reset(); $('category-modal-title').textContent = 'تعديل الفئة'; $('category-id').value = category.id; $('category-name').value = category.name_ar; $('category-slug').value = category.slug; $('category-description').value = category.description_ar || ''; $('category-image').value = category.image_url || ''; $('category-sort').value = category.sort_order || 0; $('category-active').checked = category.is_active; formMessage($('category-form'), '', false); openModal('category-modal'); }
+    function openCategoryDelete(id) { const category = state.categories.find(item => Number(item.id) === Number(id)); if (!category) return; const productsCount = state.products.filter(product => Number(product.category_id) === Number(category.id)).length; $('category-delete-form').reset(); $('category-delete-id').value = category.id; $('category-delete-name').textContent = category.name_ar; $('category-delete-details').textContent = productsCount ? `تحتوي هذه الفئة على ${productsCount} منتج. ستنتقل المنتجات إلى «بدون فئة».` : 'هذه الفئة لا تحتوي على منتجات.'; formMessage($('category-delete-form'), '', false); openModal('category-delete-modal'); }
     function formMessage(form, message, error = false) { const element = form.querySelector('.form-message'); element.textContent = message; element.style.color = error ? 'var(--admin-danger)' : 'var(--admin-success)'; }
     async function saveProduct(event) {
         event.preventDefault();
@@ -218,8 +230,21 @@
         setSubmitting(form, true, 'جاري حفظ الفئة...'); formMessage(form, '', false);
         try {
             if (previewMode) { const existing = state.categories.find(item => String(item.id) === id); if (existing) Object.assign(existing, body); else state.categories.push({ ...body, id: Date.now() }); }
-            else { await api(id ? `/api/admin/categories/${id}` : '/api/admin/categories', { method: id ? 'PATCH' : 'POST', body }); state.categories = await api('/api/admin/categories'); }
+            else { await api(id ? `/api/admin/categories/${id}` : '/api/admin/categories', { method: id ? 'PATCH' : 'POST', body }); [state.categories, state.products] = await Promise.all([api('/api/admin/categories'), api('/api/admin/products')]); }
             closeModals(); renderAll(); toast(id ? 'تم تعديل الفئة بنجاح' : 'تمت إضافة الفئة بنجاح');
+        } catch (error) { formMessage(form, error.message, true); }
+        finally { setSubmitting(form, false); }
+    }
+    async function deleteCategory(event) {
+        event.preventDefault();
+        const form = event.currentTarget, id = Number($('category-delete-id').value);
+        const category = state.categories.find(item => Number(item.id) === id);
+        if (!category) { formMessage(form, 'الفئة غير موجودة أو تم حذفها بالفعل', true); return; }
+        setSubmitting(form, true, 'جاري حذف الفئة...'); formMessage(form, '', false);
+        try {
+            if (previewMode) { state.categories = state.categories.filter(item => Number(item.id) !== id); state.products.forEach(product => { if (Number(product.category_id) === id) { product.category_id = null; product.category_name = 'بدون فئة'; } }); }
+            else { await api(`/api/admin/categories/${id}`, { method: 'DELETE' }); [state.categories, state.products] = await Promise.all([api('/api/admin/categories'), api('/api/admin/products')]); }
+            closeModals(); renderAll(); toast(`تم حذف فئة ${category.name_ar}`);
         } catch (error) { formMessage(form, error.message, true); }
         finally { setSubmitting(form, false); }
     }
@@ -243,7 +268,7 @@
 
     document.addEventListener('click', event => {
         const nav = event.target.closest('[data-view]'); if (nav) { currentView = nav.dataset.view; document.querySelectorAll('.admin-nav__item').forEach(item => item.classList.toggle('active', item === nav)); document.querySelectorAll('.admin-view').forEach(view => view.classList.toggle('active', view.id === `view-${currentView}`)); $('view-title').textContent = viewTitles[currentView]; $('admin-sidebar').classList.remove('open'); }
-        const modalButton = event.target.closest('[data-open-modal]'); if (modalButton) { const form = $(modalButton.dataset.openModal)?.querySelector('form'); if (form) { form.reset(); const message = form.querySelector('.form-message'); if (message) message.textContent = ''; } if (modalButton.dataset.openModal === 'product-modal') { $('product-id').value = ''; $('product-modal-title').textContent = 'إضافة منتج جديد'; $('product-active').checked = true; } if (modalButton.dataset.openModal === 'sale-modal') { $('sale-modal-title').textContent = 'إضافة عرض جديد'; $('sale-product').disabled = false; $('remove-sale').hidden = true; } if (modalButton.dataset.openModal === 'supplier-modal') { $('supplier-activation-result').hidden = true; $('supplier-save-btn').hidden = false; $('supplier-form').querySelector('.form-grid').hidden = false; $('supplier-form').querySelector('.hint').hidden = false; } if (modalButton.dataset.openModal === 'category-modal') $('category-id').value = ''; openModal(modalButton.dataset.openModal); }
+        const modalButton = event.target.closest('[data-open-modal]'); if (modalButton) { const form = $(modalButton.dataset.openModal)?.querySelector('form'); if (form) { form.reset(); const message = form.querySelector('.form-message'); if (message) message.textContent = ''; } if (modalButton.dataset.openModal === 'product-modal') { $('product-id').value = ''; $('product-modal-title').textContent = 'إضافة منتج جديد'; $('product-active').checked = true; } if (modalButton.dataset.openModal === 'sale-modal') { $('sale-modal-title').textContent = 'إضافة عرض جديد'; $('sale-product').disabled = false; $('remove-sale').hidden = true; } if (modalButton.dataset.openModal === 'supplier-modal') { $('supplier-activation-result').hidden = true; $('supplier-save-btn').hidden = false; $('supplier-form').querySelector('.form-grid').hidden = false; $('supplier-form').querySelector('.hint').hidden = false; } if (modalButton.dataset.openModal === 'category-modal') { $('category-id').value = ''; $('category-modal-title').textContent = 'إضافة فئة جديدة'; $('category-active').checked = true; } openModal(modalButton.dataset.openModal); }
         if (event.target.closest('[data-close-modal]') || (event.target.classList.contains('modal-shell'))) closeModals();
         const orderButton = event.target.closest('[data-order-id]'); if (orderButton) showOrder(orderButton.dataset.orderId);
         const review = event.target.closest('[data-review-action]'); if (review) reviewOrder(review.dataset.id, review.dataset.reviewAction);
@@ -251,11 +276,13 @@
         const product = event.target.closest('[data-edit-product]'); if (product) editProduct(product.dataset.editProduct);
         const sale = event.target.closest('[data-edit-sale]'); if (sale) editSale(sale.dataset.editSale);
         const category = event.target.closest('[data-edit-category]'); if (category) editCategory(category.dataset.editCategory);
+        const deleteCategoryButton = event.target.closest('[data-delete-category]'); if (deleteCategoryButton) openCategoryDelete(deleteCategoryButton.dataset.deleteCategory);
         const stock = event.target.closest('[data-stock-product]'); if (stock) { $('stock-product').value = stock.dataset.stockProduct; openModal('stock-modal'); }
         const reset = event.target.closest('[data-reset-device]'); if (reset) resetDevice(Number(reset.dataset.resetDevice));
     });
     $('login-form').addEventListener('submit', async event => { event.preventDefault(); const status = $('login-status'); status.textContent = 'جاري تسجيل الدخول...'; try { const result = await api('/api/auth/login', { method: 'POST', body: { email: $('admin-email').value.trim(), password: $('admin-password').value } }); if (result.role !== 'admin') throw new Error('هذا الحساب ليس حساب إدارة'); token = result.access_token; sessionStorage.setItem('tallagtyAdminToken', token); status.textContent = ''; showApp(); await loadAll(); } catch (error) { status.textContent = error.message; } });
-    $('product-form').addEventListener('submit', saveProduct); $('sale-form').addEventListener('submit', saveSale); $('remove-sale').addEventListener('click', removeSale); $('category-form').addEventListener('submit', saveCategory); $('supplier-form').addEventListener('submit', saveSupplier); $('stock-form').addEventListener('submit', saveStock);
+    $('product-form').addEventListener('submit', saveProduct); $('sale-form').addEventListener('submit', saveSale); $('remove-sale').addEventListener('click', removeSale); $('category-form').addEventListener('submit', saveCategory); $('category-delete-form').addEventListener('submit', deleteCategory); $('supplier-form').addEventListener('submit', saveSupplier); $('stock-form').addEventListener('submit', saveStock);
+    $('category-manage-toggle').addEventListener('click', () => { categoryManageMode = !categoryManageMode; renderCategories(); });
     $('order-search').addEventListener('input', renderOrders); $('order-filter').addEventListener('change', renderOrders); $('refresh-current').addEventListener('click', refreshView); $('print-report').addEventListener('click', () => window.print()); $('mobile-menu').addEventListener('click', () => $('admin-sidebar').classList.toggle('open')); $('logout-btn').addEventListener('click', () => { token = ''; sessionStorage.removeItem('tallagtyAdminToken'); showLogin(); });
     $('today-label').textContent = new Intl.DateTimeFormat('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
     bootstrap();

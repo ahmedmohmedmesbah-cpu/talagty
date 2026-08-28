@@ -390,6 +390,13 @@ Deno.serve(async (request) => {
         if (error) return apiError(request, databaseMessage(error, 'category'), 422)
         return response(request, data)
       }
+      if (request.method === 'DELETE' && categoryMatch) {
+        const categoryId = Number(categoryMatch[1])
+        const { data, error } = await admin.from('categories').delete().eq('id', categoryId).select('id,name_ar').maybeSingle()
+        if (error) return apiError(request, databaseMessage(error, 'category'), 422)
+        if (!data) return apiError(request, 'الفئة غير موجودة أو تم حذفها بالفعل', 404)
+        return response(request, { deleted: true, category: data })
+      }
 
       if (request.method === 'GET' && route === '/api/admin/products') return response(request, await listProducts(true))
       if (request.method === 'POST' && route === '/api/admin/products') {
