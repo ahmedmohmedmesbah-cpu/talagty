@@ -202,7 +202,27 @@
         const product = state.products.find(item => Number(item.id) === Number($('sale-product').value)); if (!product) return;
         try { const sale = { sale_type: 'none', sale_value: 0, sale_start: null, sale_end: null }; if (previewMode) Object.assign(product, sale, { effective_price: Number(product.unit_price) }); else await api(`/api/admin/products/${product.id}`, { method: 'PATCH', body: productUpdateBody(product, sale) }); closeModals(); await refreshView(); toast('تم إيقاف العرض'); } catch (error) { toast(error.message, true); }
     }
-    async function saveCategory(event) { event.preventDefault(); const id = $('category-id').value, body = { name_ar: $('category-name').value.trim(), slug: $('category-slug').value.trim(), description_ar: $('category-description').value.trim(), image_url: normalizeDriveUrl($('category-image').value.trim()), sort_order: Number($('category-sort').value || 0), is_active: $('category-active').checked }; try { if (previewMode) { const existing = state.categories.find(item => String(item.id) === id); if (existing) Object.assign(existing, body); else state.categories.push({ ...body, id: Date.now() }); } else await api(id ? `/api/admin/categories/${id}` : '/api/admin/categories', { method: id ? 'PATCH' : 'POST', body }); closeModals(); await refreshView(); toast('تم حفظ الفئة'); } catch (error) { formMessage(event.currentTarget, error.message, true); } }
+    async function saveCategory(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        if (!requireValue(form, 'category-name', 'اكتب اسم الفئة')) return;
+        const id = $('category-id').value;
+        const customSlug = $('category-slug').value.trim().toLowerCase();
+        if (customSlug && !/^[a-z0-9-]+$/.test(customSlug)) { formMessage(form, 'الرابط المختصر يقبل حروفاً إنجليزية صغيرة وأرقاماً وشرطة (-) فقط، أو اتركه فارغاً', true); $('category-slug').focus(); return; }
+        const image = $('category-image').value.trim();
+        if (image && !/^https?:\/\//i.test(image)) { formMessage(form, 'رابط الصورة يجب أن يبدأ بـ http:// أو https://', true); $('category-image').focus(); return; }
+        const sortOrder = Number($('category-sort').value || 0);
+        if (!Number.isInteger(sortOrder) || sortOrder < 0) { formMessage(form, 'ترتيب الظهور يجب أن يكون رقماً صحيحاً يبدأ من صفر', true); $('category-sort').focus(); return; }
+        const generatedSlug = `category-${Date.now().toString(36)}`;
+        const body = { name_ar: $('category-name').value.trim(), slug: customSlug || generatedSlug, description_ar: $('category-description').value.trim(), image_url: normalizeDriveUrl(image), sort_order: sortOrder, is_active: $('category-active').checked };
+        setSubmitting(form, true, 'جاري حفظ الفئة...'); formMessage(form, '', false);
+        try {
+            if (previewMode) { const existing = state.categories.find(item => String(item.id) === id); if (existing) Object.assign(existing, body); else state.categories.push({ ...body, id: Date.now() }); }
+            else { await api(id ? `/api/admin/categories/${id}` : '/api/admin/categories', { method: id ? 'PATCH' : 'POST', body }); state.categories = await api('/api/admin/categories'); }
+            closeModals(); renderAll(); toast(id ? 'تم تعديل الفئة بنجاح' : 'تمت إضافة الفئة بنجاح');
+        } catch (error) { formMessage(form, error.message, true); }
+        finally { setSubmitting(form, false); }
+    }
     async function saveSupplier(event) {
         event.preventDefault();
         const form = event.currentTarget;

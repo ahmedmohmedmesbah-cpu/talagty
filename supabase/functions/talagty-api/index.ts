@@ -70,6 +70,25 @@ function validateProductInput(body: any) {
   return null
 }
 
+function categoryRow(body: any) {
+  const requestedSlug = String(body.slug ?? '').trim().toLowerCase()
+  return {
+    slug: requestedSlug || `category-${crypto.randomUUID().slice(0, 8)}`,
+    name_ar: String(body.name_ar ?? '').trim(),
+    description_ar: String(body.description_ar ?? '').trim() || null,
+    image_url: normalizeDriveUrl(body.image_url),
+    sort_order: Number(body.sort_order ?? 0),
+    is_active: body.is_active !== false,
+  }
+}
+
+function validateCategoryInput(row: ReturnType<typeof categoryRow>) {
+  if (row.name_ar.length < 2 || row.name_ar.length > 150) return 'اسم الفئة يجب أن يكون بين حرفين و150 حرفاً'
+  if (!/^[a-z0-9-]+$/.test(row.slug) || row.slug.length > 80) return 'الرابط المختصر يقبل حروفاً إنجليزية صغيرة وأرقاماً وشرطة (-) فقط'
+  if (!Number.isInteger(row.sort_order) || row.sort_order < 0) return 'ترتيب الظهور يجب أن يكون رقماً صحيحاً يبدأ من صفر'
+  return null
+}
+
 function base64Url(bytes: Uint8Array) {
   let text = ''
   for (const byte of bytes) text += String.fromCharCode(byte)
@@ -141,7 +160,7 @@ function relationOne(value: any) {
   return Array.isArray(value) ? value[0] : value
 }
 
-function databaseMessage(error: any, entity: 'product' | 'supplier') {
+function databaseMessage(error: any, entity: 'product' | 'supplier' | 'category') {
   const code = String(error?.code || '')
   const details = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
   if (code === '23505') {
@@ -149,10 +168,11 @@ function databaseMessage(error: any, entity: 'product' | 'supplier') {
     if (details.includes('phone_normalized')) return 'رقم الهاتف مرتبط بحساب موجود بالفعل.'
     if (details.includes('national_id')) return 'الرقم القومي مرتبط بمندوب موجود بالفعل.'
     if (details.includes('email')) return 'البريد الإلكتروني مرتبط بحساب موجود بالفعل.'
+    if (entity === 'category') return 'الرابط المختصر مستخدم لفئة أخرى. اتركه فارغاً لإنشاء رابط تلقائي.'
     return entity === 'product' ? 'هذا المنتج موجود بالفعل.' : 'بيانات هذا المندوب مستخدمة في حساب موجود.'
   }
-  if (code === '23514') return entity === 'product' ? 'بيانات السعر أو العرض أو المخزون غير صحيحة.' : 'بيانات المندوب غير مكتملة.'
-  return entity === 'product' ? 'تعذر حفظ المنتج. راجع البيانات وحاول مرة أخرى.' : 'تعذر إنشاء حساب المندوب. راجع البيانات وحاول مرة أخرى.'
+  if (code === '23514') return entity === 'product' ? 'بيانات السعر أو العرض أو المخزون غير صحيحة.' : entity === 'category' ? 'بيانات الفئة غير صحيحة.' : 'بيانات المندوب غير مكتملة.'
+  return entity === 'product' ? 'تعذر حفظ المنتج. راجع البيانات وحاول مرة أخرى.' : entity === 'category' ? 'تعذر حفظ الفئة. راجع البيانات وحاول مرة أخرى.' : 'تعذر إنشاء حساب المندوب. راجع البيانات وحاول مرة أخرى.'
 }
 
 function htmlEscape(value: unknown) {
@@ -353,15 +373,21 @@ Deno.serve(async (request) => {
       if (request.method === 'GET' && route === '/api/admin/categories') return response(request, await listCategories(true))
       if (request.method === 'POST' && route === '/api/admin/categories') {
         const body = await parseBody(request)
-        const { data, error } = await admin.from('categories').insert({ slug: String(body.slug ?? '').trim().toLowerCase(), name_ar: String(body.name_ar ?? '').trim(), description_ar: String(body.description_ar ?? '').trim() || null, image_url: normalizeDriveUrl(body.image_url), sort_order: Number(body.sort_order || 0), is_active: body.is_active !== false }).select().single()
-        if (error) return apiError(request, error.message, 422)
+        const row = categoryRow(body)
+        const validationError = validateCategoryInput(row)
+        if (validationError) return apiError(request, validationError, 422)
+        const { data, error } = await admin.from('categories').insert(row).select().single()
+        if (error) return apiError(request, databaseMessage(error, 'category'), 422)
         return response(request, data, 201)
       }
       const categoryMatch = route.match(/^\/api\/admin\/categories\/(\d+)$/)
       if (request.method === 'PATCH' && categoryMatch) {
         const body = await parseBody(request)
-        const { data, error } = await admin.from('categories').update({ slug: String(body.slug ?? '').trim().toLowerCase(), name_ar: String(body.name_ar ?? '').trim(), description_ar: String(body.description_ar ?? '').trim() || null, image_url: normalizeDriveUrl(body.image_url), sort_order: Number(body.sort_order || 0), is_active: body.is_active !== false, updated_at: new Date().toISOString() }).eq('id', Number(categoryMatch[1])).select().single()
-        if (error) return apiError(request, error.message, 422)
+        const row = categoryRow(body)
+        const validationError = validateCategoryInput(row)
+        if (validationError) return apiError(request, validationError, 422)
+        const { data, error } = await admin.from('categories').update({ ...row, updated_at: new Date().toISOString() }).eq('id', Number(categoryMatch[1])).select().single()
+        if (error) return apiError(request, databaseMessage(error, 'category'), 422)
         return response(request, data)
       }
 
