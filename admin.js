@@ -19,7 +19,7 @@
 
     function $(id) { return document.getElementById(id); }
     function escapeHtml(value = '') { return String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]); }
-    function normalizeDriveUrl(url = '') { const match = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([\w-]+)/); return match ? `https://drive.google.com/uc?export=view&id=${match[1]}` : url; }
+    function normalizeDriveUrl(value = '') { const url = String(value ?? '').trim(); const match = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([\w-]+)/); return match ? `https://drive.google.com/uc?export=view&id=${match[1]}` : url; }
     function toast(message, isError = false) { const element = $('admin-toast'); element.textContent = message; element.classList.toggle('error', isError); element.classList.add('show'); clearTimeout(toast.timer); toast.timer = setTimeout(() => element.classList.remove('show'), 3500); }
     function openModal(id) { const modal = $(id); if (modal) modal.hidden = false; }
     function closeModals() { document.querySelectorAll('.modal-shell').forEach(modal => { modal.hidden = true; }); }
