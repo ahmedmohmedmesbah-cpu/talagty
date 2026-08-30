@@ -9,10 +9,13 @@ const bootstrapPassword = Deno.env.get('BOOTSTRAP_ADMIN_PASSWORD')!
 const adminReportEmail = Deno.env.get('ADMIN_REPORT_EMAIL') || bootstrapEmail
 const resendApiKey = Deno.env.get('RESEND_API_KEY') || ''
 const reportFromEmail = Deno.env.get('REPORT_FROM_EMAIL') || 'Tallagty <onboarding@resend.dev>'
+const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID') || ''
+const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN') || ''
+const twilioVerifyServiceSid = Deno.env.get('TWILIO_VERIFY_SERVICE_SID') || ''
 const admin = createClient(projectUrl, serviceRoleKey, { auth: { persistSession: false } })
 const allowedOrigins = new Set(['https://ahmedmohmedmesbah-cpu.github.io', 'http://127.0.0.1:8040', 'http://localhost:8040'])
 
-type Role = 'admin' | 'supplier'
+type Role = 'admin' | 'supplier' | 'customer'
 type TokenClaims = { sub: number; role: Role; exp: number; device?: string }
 
 function corsHeaders(request: Request) {
@@ -39,6 +42,20 @@ function normalizePhone(value: unknown) {
   let phone = String(value ?? '').trim().replace(/[^0-9+]/g, '')
   if (phone.startsWith('00')) phone = '+' + phone.slice(2)
   return phone
+}
+
+function normalizeCustomerPhone(value: unknown) {
+  let phone = normalizePhone(value)
+  if (/^01[0125][0-9]{8}$/.test(phone)) phone = '+20' + phone.slice(1)
+  else if (/^201[0125][0-9]{8}$/.test(phone)) phone = '+' + phone
+  return phone
+}
+
+function customerPhoneCandidates(value: unknown) {
+  const canonical = normalizeCustomerPhone(value)
+  const candidates = [canonical]
+  if (/^\+201[0125][0-9]{8}$/.test(canonical)) candidates.push('0' + canonical.slice(3))
+  return [...new Set(candidates)]
 }
 
 function normalizeDriveUrl(value: unknown) {
@@ -110,9 +127,9 @@ async function jwtSignature(value: string) {
   return base64Url(new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value))))
 }
 
-async function issueToken(userId: number, role: Role, device?: string) {
+async function issueToken(userId: number, role: Role, device?: string, lifetimeSeconds = 8 * 60 * 60) {
   const header = base64Url(new TextEncoder().encode(JSON.stringify({ alg: 'HS256', typ: 'JWT' })))
-  const payload = base64Url(new TextEncoder().encode(JSON.stringify({ sub: userId, role, device, exp: Math.floor(Date.now() / 1000) + 8 * 60 * 60 })))
+  const payload = base64Url(new TextEncoder().encode(JSON.stringify({ sub: userId, role, device, exp: Math.floor(Date.now() / 1000) + lifetimeSeconds })))
   return header + '.' + payload + '.' + await jwtSignature(header + '.' + payload)
 }
 
@@ -144,6 +161,54 @@ async function requireSupplier(request: Request) {
   const { data: user } = await admin.from('users').select('device_id_hash,is_active').eq('id', claims.sub).maybeSingle()
   if (!user?.is_active || user.device_id_hash !== claims.device) return null
   return claims
+}
+
+async function requireCustomer(request: Request) {
+  const claims = await requireRole(request, 'customer')
+  if (!claims) return null
+  const deviceId = request.headers.get('x-device-id') || ''
+  if (!deviceId || claims.device !== await sha256(deviceId)) return null
+  const { data: customer } = await admin.from('customers').select('id,device_id_hash,phone_verified_at').eq('id', claims.sub).maybeSingle()
+  if (!customer?.phone_verified_at || customer.device_id_hash !== claims.device) return null
+  await admin.from('customers').update({ last_seen_at: new Date().toISOString() }).eq('id', customer.id)
+  return claims
+}
+
+function twilioHeaders() {
+  return {
+    Authorization: 'Basic ' + btoa(twilioAccountSid + ':' + twilioAuthToken),
+    'Content-Type': 'application/x-www-form-urlencoded',
+  }
+}
+
+async function sendCustomerOtp(phone: string) {
+  if (!twilioAccountSid || !twilioAuthToken || !twilioVerifyServiceSid) {
+    throw new Error('خدمة رسائل SMS غير مفعلة بعد. يجب إضافة بيانات مزود الرسائل في Supabase.')
+  }
+  const result = await fetch(`https://verify.twilio.com/v2/Services/${twilioVerifyServiceSid}/Verifications`, {
+    method: 'POST',
+    headers: twilioHeaders(),
+    body: new URLSearchParams({ To: phone, Channel: 'sms' }),
+  })
+  const payload = await result.json().catch(() => ({}))
+  if (!result.ok) {
+    console.error('Twilio verification request failed', payload)
+    throw new Error('تعذر إرسال رمز التحقق حالياً. تأكد من الرقم وحاول مرة أخرى.')
+  }
+  return String(payload.sid || '')
+}
+
+async function verifyCustomerOtp(phone: string, code: string) {
+  if (!twilioAccountSid || !twilioAuthToken || !twilioVerifyServiceSid) {
+    throw new Error('خدمة رسائل SMS غير مفعلة بعد. يجب إضافة بيانات مزود الرسائل في Supabase.')
+  }
+  const result = await fetch(`https://verify.twilio.com/v2/Services/${twilioVerifyServiceSid}/VerificationCheck`, {
+    method: 'POST',
+    headers: twilioHeaders(),
+    body: new URLSearchParams({ To: phone, Code: code }),
+  })
+  const payload = await result.json().catch(() => ({}))
+  return result.ok && payload.status === 'approved'
 }
 
 async function ensureBootstrapAdmin() {
@@ -223,7 +288,7 @@ function mapOrder(order: any) {
 
 const orderSelect = 'id,public_id,order_number,delivery_address,admin_note,status,subtotal,delivery_fee,total,payment_method,amount_paid,currency,created_at,updated_at,approved_at,completed_at,customers(full_name,phone_normalized),order_items(id,product_sku,product_name_ar,quantity,unit_price,line_total),suppliers(id,users(full_name)),order_supplier_assignments(id,is_primary,suppliers(id,users(full_name))),order_status_history(previous_status,new_status,note,created_at)'
 
-async function getOrders(phone?: string, supplierUserId?: number) {
+async function getOrders(phone?: string, supplierUserId?: number, customerId?: number) {
   let orderIds: number[] | null = null
   if (supplierUserId) {
     const { data: supplier } = await admin.from('suppliers').select('id').eq('user_id', supplierUserId).maybeSingle()
@@ -235,14 +300,40 @@ async function getOrders(phone?: string, supplierUserId?: number) {
   }
   let query = admin.from('orders').select(orderSelect).order('created_at', { ascending: false })
   if (phone) {
-    const { data: customer } = await admin.from('customers').select('id').eq('phone_normalized', normalizePhone(phone)).maybeSingle()
+    const { data: customer } = await admin.from('customers').select('id').eq('phone_normalized', normalizeCustomerPhone(phone)).maybeSingle()
     if (!customer) return []
     query = query.eq('customer_id', customer.id)
   }
+  if (customerId) query = query.eq('customer_id', customerId)
   if (orderIds) query = query.in('id', orderIds)
   const { data, error } = await query
   if (error) throw error
   return (data ?? []).map(mapOrder)
+}
+
+async function getCustomerOrders(customerId: number) {
+  const orders = await getOrders(undefined, undefined, customerId)
+  const databaseIds = orders.map((order: any) => order.database_id)
+  if (!databaseIds.length) return []
+  const { data: tokens, error } = await admin.from('delivery_confirmation_tokens')
+    .select('order_id,token_value,expires_at,used_at,created_at')
+    .in('order_id', databaseIds)
+    .is('used_at', null)
+    .not('token_value', 'is', null)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  const tokenByOrder = new Map<number, any>()
+  for (const token of tokens ?? []) if (!tokenByOrder.has(token.order_id)) tokenByOrder.set(token.order_id, token)
+  return orders.map((order: any) => {
+    const token = tokenByOrder.get(order.database_id)
+    const qrVisible = ['assigned', 'preparing', 'out_for_delivery'].includes(order.status)
+    const { database_id: _databaseId, ...safeOrder } = order
+    return {
+      ...safeOrder,
+      delivery_qr_payload: qrVisible && token?.token_value ? `talagty:${order.order_id}:${token.token_value}` : null,
+      delivery_qr_created_at: qrVisible && token?.token_value ? token.created_at : null,
+    }
+  })
 }
 
 async function listProducts(includeInactive = false) {
@@ -290,30 +381,104 @@ Deno.serve(async (request) => {
     if (request.method === 'GET' && route === '/health') return response(request, { status: 'ok', version: '2.0' })
     if (request.method === 'GET' && route === '/api/catalog') return response(request, { categories: await listCategories(), products: await listProducts() })
 
+    if (request.method === 'POST' && route === '/api/customer/auth/request-code') {
+      const body = await parseBody(request)
+      const phone = normalizeCustomerPhone(body.phone)
+      const deviceId = String(body.device_id ?? '')
+      if (!/^\+[1-9][0-9]{7,14}$/.test(phone)) return apiError(request, 'رقم الهاتف غير صحيح', 422)
+      if (deviceId.length < 16 || deviceId.length > 200) return apiError(request, 'تعذر التعرف على هذا الجهاز', 422)
+      const deviceHash = await sha256(deviceId)
+      const { data: customers, error: customerError } = await admin.from('customers').select('id,device_id_hash').in('phone_normalized', customerPhoneCandidates(phone)).limit(1)
+      if (customerError) throw customerError
+      const customer = customers?.[0]
+      if (!customer) return apiError(request, 'لا يوجد طلب مرتبط بهذا الرقم', 404)
+      if (customer.device_id_hash && customer.device_id_hash !== deviceHash) return apiError(request, 'هذا الرقم مرتبط بجهاز آخر. تواصل مع الإدارة لتغيير الجهاز.', 409, { device_mismatch: true })
+
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
+      const { count: recentCount } = await admin.from('customer_otp_challenges').select('id', { count: 'exact', head: true }).eq('phone_normalized', phone).gte('created_at', oneMinuteAgo)
+      if ((recentCount ?? 0) > 0) return apiError(request, 'انتظر دقيقة قبل طلب رمز جديد', 429, { retry_after_seconds: 60 })
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+      const { count: hourlyCount } = await admin.from('customer_otp_challenges').select('id', { count: 'exact', head: true }).eq('phone_normalized', phone).gte('created_at', oneHourAgo)
+      if ((hourlyCount ?? 0) >= 5) return apiError(request, 'تم تجاوز عدد محاولات الإرسال. حاول بعد ساعة.', 429)
+
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+      const { data: challenge, error: challengeError } = await admin.from('customer_otp_challenges').insert({ customer_id: customer.id, phone_normalized: phone, device_id_hash: deviceHash, expires_at: expiresAt }).select('id').single()
+      if (challengeError) throw challengeError
+      try {
+        const providerReference = await sendCustomerOtp(phone)
+        await admin.from('customer_otp_challenges').update({ provider_reference: providerReference }).eq('id', challenge.id)
+      } catch (error) {
+        await admin.from('customer_otp_challenges').update({ status: 'failed' }).eq('id', challenge.id)
+        return apiError(request, error instanceof Error ? error.message : 'تعذر إرسال رمز التحقق', 503)
+      }
+      const maskedPhone = phone.slice(0, 4) + '••••' + phone.slice(-3)
+      return response(request, { challenge_id: challenge.id, masked_phone: maskedPhone, expires_in_seconds: 600 })
+    }
+
+    if (request.method === 'POST' && route === '/api/customer/auth/verify-code') {
+      const body = await parseBody(request)
+      const challengeId = String(body.challenge_id ?? '')
+      const deviceId = String(body.device_id ?? '')
+      const code = String(body.code ?? '').trim()
+      if (!/^[0-9]{4,10}$/.test(code) || deviceId.length < 16) return apiError(request, 'رمز التحقق غير صحيح', 422)
+      const { data: challenge } = await admin.from('customer_otp_challenges').select('id,customer_id,phone_normalized,device_id_hash,status,attempts,expires_at').eq('id', challengeId).maybeSingle()
+      if (!challenge || challenge.status !== 'pending') return apiError(request, 'طلب التحقق غير صالح. اطلب رمزاً جديداً.', 401)
+      if (new Date(challenge.expires_at).getTime() <= Date.now()) {
+        await admin.from('customer_otp_challenges').update({ status: 'expired' }).eq('id', challenge.id)
+        return apiError(request, 'انتهت صلاحية الرمز. اطلب رمزاً جديداً.', 401)
+      }
+      const deviceHash = await sha256(deviceId)
+      if (challenge.device_id_hash !== deviceHash) return apiError(request, 'هذا الرمز غير صالح لهذا الجهاز', 403)
+      if (Number(challenge.attempts) >= 5) return apiError(request, 'تم تجاوز عدد محاولات التحقق. اطلب رمزاً جديداً.', 429)
+      let approved = false
+      try { approved = await verifyCustomerOtp(challenge.phone_normalized, code) }
+      catch (error) { return apiError(request, error instanceof Error ? error.message : 'تعذر التحقق من الرمز', 503) }
+      if (!approved) {
+        const attempts = Number(challenge.attempts) + 1
+        await admin.from('customer_otp_challenges').update({ attempts, status: attempts >= 5 ? 'failed' : 'pending' }).eq('id', challenge.id)
+        return apiError(request, 'رمز التحقق غير صحيح', 401, { attempts_remaining: Math.max(0, 5 - attempts) })
+      }
+      const { data: bound, error: bindError } = await admin.rpc('bind_customer_device', { p_customer_id: challenge.customer_id, p_device_id_hash: deviceHash })
+      if (bindError) return apiError(request, bindError.message, 409)
+      await admin.from('customer_otp_challenges').update({ status: 'approved', verified_at: new Date().toISOString() }).eq('id', challenge.id)
+      const customer = typeof bound === 'string' ? JSON.parse(bound) : bound
+      return response(request, {
+        access_token: await issueToken(Number(customer.customer_id), 'customer', deviceHash, 365 * 24 * 60 * 60),
+        token_type: 'bearer',
+        role: 'customer',
+        customer: { full_name: customer.full_name, phone: customer.phone },
+      })
+    }
+
+    if (route.startsWith('/api/customer/')) {
+      const customer = await requireCustomer(request)
+      if (!customer) return apiError(request, 'جلسة العميل غير صالحة لهذا الجهاز', 401)
+      if (request.method === 'GET' && route === '/api/customer/session') return response(request, { authenticated: true, role: 'customer' })
+      if (request.method === 'GET' && route === '/api/customer/orders') return response(request, await getCustomerOrders(customer.sub))
+      const customerCancelMatch = route.match(/^\/api\/customer\/orders\/([^/]+)\/cancel$/)
+      if (request.method === 'POST' && customerCancelMatch) {
+        const { data, error } = await admin.rpc('customer_cancel_order', { p_order_public_id: customerCancelMatch[1], p_customer_id: customer.sub })
+        if (error) return apiError(request, error.message, 422)
+        return response(request, data)
+      }
+    }
+
     if (request.method === 'POST' && route === '/api/orders') {
       const body = await parseBody(request)
-      const { data, error } = await admin.rpc('create_customer_order', { p_name: body.customer_name, p_phone: body.customer_phone, p_address: body.customer_address_text, p_items: body.items })
+      const phone = normalizeCustomerPhone(body.customer_phone)
+      if (!/^\+[1-9][0-9]{7,14}$/.test(phone)) return apiError(request, 'رقم الهاتف غير صحيح', 422)
+      const { data: knownCustomers, error: knownCustomerError } = await admin.from('customers').select('phone_normalized').in('phone_normalized', customerPhoneCandidates(phone)).limit(1)
+      if (knownCustomerError) throw knownCustomerError
+      const storedPhone = knownCustomers?.[0]?.phone_normalized || phone
+      const { data, error } = await admin.rpc('create_customer_order', { p_name: body.customer_name, p_phone: storedPhone, p_address: body.customer_address_text, p_items: body.items })
       if (error) return apiError(request, error.message, 422)
       const order = Array.isArray(data) ? data[0] : data
       return response(request, { order_id: order.order_id, order_number: order.order_number, status: order.status, total: order.total }, 201)
     }
-    if (request.method === 'GET' && route === '/api/orders') return response(request, await getOrders(url.searchParams.get('phone') ?? undefined))
+    if (request.method === 'GET' && route === '/api/orders') return apiError(request, 'استخدم صفحة متابعة الفاتورة وسجل رمز التحقق أولاً', 401)
     const deliveryTokenMatch = route.match(/^\/api\/orders\/([^/]+)\/delivery-token$/)
     if (request.method === 'POST' && deliveryTokenMatch) {
-      const body = await parseBody(request)
-      const phone = normalizePhone(body.phone)
-      const { data: order } = await admin.from('orders').select('id,status,customers(phone_normalized)').eq('public_id', deliveryTokenMatch[1]).maybeSingle()
-      const customer = relationOne(order?.customers)
-      if (!order || customer?.phone_normalized !== phone) return apiError(request, 'بيانات الطلب غير صحيحة', 404)
-      if (order.status !== 'out_for_delivery') return apiError(request, 'رمز الاستلام يظهر بعد خروج الطلب للتوصيل', 422)
-      const randomBytes = crypto.getRandomValues(new Uint8Array(32))
-      const qrToken = base64Url(randomBytes)
-      const manualCode = String(crypto.getRandomValues(new Uint32Array(1))[0] % 100000000).padStart(8, '0')
-      const first = await admin.rpc('create_delivery_confirmation_token', { p_order_public_id: deliveryTokenMatch[1], p_token_hash: await sha256(qrToken), p_valid_minutes: 5 })
-      if (first.error) return apiError(request, first.error.message, 422)
-      const second = await admin.from('delivery_confirmation_tokens').insert({ order_id: order.id, token_hash: await sha256(manualCode), expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString() })
-      if (second.error) throw second.error
-      return response(request, { qr_payload: 'talagty:' + deliveryTokenMatch[1] + ':' + qrToken, manual_code: manualCode, expires_in_seconds: 300 })
+      return apiError(request, 'تم استبدال هذا المسار بمتابعة العميل الآمنة', 410)
     }
 
     if (request.method === 'POST' && route === '/api/auth/activate') {

@@ -1,13 +1,74 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#06b6d4"><title>متابعة فاتورتك - تلاجتى</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="track.css"></head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#06b6d4">
+    <meta name="description" content="متابعة طلبات تلاجتى بأمان من هاتف العميل">
+    <title>متابعة فاتورتك - تلاجتى</title>
+    <link rel="stylesheet" href="style.css?v=customer-responsive-1">
+    <link rel="stylesheet" href="track.css?v=customer-device-1">
+</head>
 <body class="track-body">
-    <header class="track-header"><a href="index.html" class="track-brand"><span>ث</span><strong>تلاجتى</strong></a><a href="index.html">العودة للمتجر</a></header>
+    <header class="track-header">
+        <a href="index.html" class="track-brand"><span>ث</span><strong>تلاجتى</strong></a>
+        <div class="track-header__actions">
+            <span id="connection-state" class="connection-state" aria-live="polite"></span>
+            <a href="index.html">العودة للمتجر</a>
+        </div>
+    </header>
+
     <main class="track-main">
-        <section class="track-hero"><span>متابعة الطلب</span><h1>فاتورتك لحظة بلحظة</h1><p>أدخل رقم الهاتف المستخدم في الطلب لعرض جميع طلباتك الحالية والسابقة.</p><form id="track-form"><input id="track-phone" type="tel" inputmode="tel" required placeholder="رقم الهاتف"><button type="submit">عرض طلباتي</button></form><p id="track-message" aria-live="polite"></p></section>
-        <section class="track-list" id="track-list"></section>
+        <section class="track-auth-card" id="phone-view">
+            <span class="track-kicker">متابعة آمنة</span>
+            <h1>تابع كل طلباتك</h1>
+            <p>أدخل رقم الهاتف المستخدم في الطلب. سنرسل رمز تحقق مرة واحدة ثم نربط الرقم بهذا الجهاز.</p>
+            <form id="phone-form" class="track-form">
+                <label for="track-phone">رقم الهاتف</label>
+                <input id="track-phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="01xxxxxxxxx" maxlength="16">
+                <button type="submit">إرسال رمز التحقق</button>
+            </form>
+            <p class="track-note">بعد التفعيل لن يُفتح هذا الرقم من جهاز آخر لحماية بيانات طلباتك.</p>
+            <p id="phone-message" class="track-message" aria-live="polite"></p>
+        </section>
+
+        <section class="track-auth-card" id="otp-view" hidden>
+            <span class="track-kicker">تأكيد رقم الهاتف</span>
+            <h1>أدخل رمز الرسالة</h1>
+            <p>أرسلنا رمزاً إلى <strong id="masked-phone"></strong>. الرمز صالح لمدة 10 دقائق.</p>
+            <form id="otp-form" class="track-form">
+                <label for="track-code">رمز التحقق</label>
+                <input id="track-code" class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{4,10}" maxlength="10" placeholder="ــــــ">
+                <button type="submit">تأكيد وربط الجهاز</button>
+            </form>
+            <button type="button" class="track-link-button" id="change-phone">تغيير رقم الهاتف</button>
+            <p id="otp-message" class="track-message" aria-live="polite"></p>
+        </section>
+
+        <section id="orders-view" hidden>
+            <header class="orders-heading">
+                <div><span class="track-kicker">طلباتك</span><h1>متابعة الفواتير</h1><p id="customer-phone-label"></p></div>
+                <button type="button" id="refresh-orders">تحديث الطلبات</button>
+            </header>
+            <p id="orders-message" class="track-message orders-message" aria-live="polite"></p>
+            <section class="track-list" id="track-list" aria-live="polite"></section>
+        </section>
     </main>
-    <div class="receipt-modal" id="receipt-modal" hidden><div class="receipt-card"><button id="close-receipt">×</button><span>تأكيد استلام آمن</span><h2>اعرض الرمز للمورد</h2><p>سيظل الرمز صالحاً لمدة خمس دقائق ويُستخدم مرة واحدة فقط.</p><div id="receipt-qr" class="receipt-qr"></div><div class="receipt-code"><small>الرمز الاحتياطي</small><strong id="manual-code">--------</strong></div><p id="receipt-countdown"></p></div></div>
+
+    <div class="receipt-modal" id="receipt-modal" hidden>
+        <div class="receipt-card" role="dialog" aria-modal="true" aria-labelledby="receipt-title">
+            <button id="close-receipt" type="button" aria-label="إغلاق">×</button>
+            <span>تأكيد الاستلام</span>
+            <h2 id="receipt-title">اعرض الرمز للمندوب</h2>
+            <p>يفتح المندوب «تسليم أوردر» ويمسح هذا الرمز. الرمز محفوظ مع الطلب ويعمل بعد تحميله حتى دون اتصال.</p>
+            <div id="receipt-qr" class="receipt-qr"></div>
+            <strong id="receipt-order-number" class="receipt-order-number"></strong>
+            <p id="receipt-offline-note" class="receipt-offline-note"></p>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <script src="api-config.js"></script><script src="track.js"></script>
-</body></html>
+    <script src="api-config.js"></script>
+    <script src="track.js?v=customer-device-1"></script>
+</body>
+</html>
