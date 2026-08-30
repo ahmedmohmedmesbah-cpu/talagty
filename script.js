@@ -25,9 +25,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartCloseBtn = document.getElementById('cart-close');
     const cartBody = document.getElementById('cart-body');
     const cartCountEl = document.getElementById('cart-count');
-    const cartSubtotalEl = document.getElementById('cart-subtotal');
+    const navMenu = document.getElementById('nav-menu');
+    const navToggle = document.getElementById('nav-toggle');
 
     let cart = JSON.parse(localStorage.getItem('tallagtyCart')) || [];
+
+    const closeMobileMenu = () => {
+        if (!navMenu || !navToggle) return;
+        navMenu.classList.remove('active');
+        navToggle.setAttribute('aria-expanded', 'false');
+    };
+
+    if (navToggle && navMenu) {
+        navToggle.setAttribute('aria-label', 'فتح قائمة التنقل');
+        navToggle.setAttribute('aria-controls', 'nav-menu');
+        navToggle.setAttribute('aria-expanded', 'false');
+        navToggle.addEventListener('click', () => {
+            const isOpen = navMenu.classList.toggle('active');
+            navToggle.setAttribute('aria-expanded', String(isOpen));
+        });
+        navMenu.addEventListener('click', (event) => {
+            if (event.target.closest('a')) closeMobileMenu();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeMobileMenu();
+        });
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) closeMobileMenu();
+        });
+    }
 
     const saveCart = () => localStorage.setItem('tallagtyCart', JSON.stringify(cart));
 
@@ -45,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateCartInfo = () => {
         const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
         if (cartCountEl) cartCountEl.textContent = String(totalItems);
+        const cartSubtotalEl = document.getElementById('cart-subtotal');
         if (cartSubtotalEl) {
             const subtotal = cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0);
             cartSubtotalEl.textContent = currencyFmt.format(subtotal);
