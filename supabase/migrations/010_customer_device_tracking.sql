@@ -11,7 +11,7 @@ CREATE INDEX IF NOT EXISTS ix_customers_device_id_hash
     WHERE device_id_hash IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS customer_otp_challenges (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
     customer_id BIGINT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     order_id BIGINT REFERENCES orders(id) ON DELETE CASCADE,
     created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
@@ -149,11 +149,11 @@ BEGIN
         SET used_at = coalesce(used_at, now())
         WHERE order_id = NEW.id AND used_at IS NULL;
 
-        v_token := encode(gen_random_bytes(32), 'hex');
+        v_token := encode(extensions.gen_random_bytes(32), 'hex');
         INSERT INTO delivery_confirmation_tokens(order_id, token_hash, token_value, expires_at)
         VALUES (
             NEW.id,
-            encode(digest(v_token, 'sha256'), 'hex'),
+            encode(extensions.digest(v_token, 'sha256'), 'hex'),
             v_token,
             now() + interval '365 days'
         );
@@ -170,7 +170,7 @@ EXECUTE FUNCTION public.ensure_order_delivery_token();
 
 -- Backfill a persistent QR for active orders that were assigned before this migration.
 WITH existing AS (
-    SELECT token.id, encode(gen_random_bytes(32), 'hex') AS token_value
+    SELECT token.id, encode(extensions.gen_random_bytes(32), 'hex') AS token_value
     FROM delivery_confirmation_tokens token
     JOIN orders o ON o.id = token.order_id
     WHERE o.status IN ('assigned', 'preparing', 'out_for_delivery')
@@ -179,13 +179,13 @@ WITH existing AS (
 )
 UPDATE delivery_confirmation_tokens token
 SET token_value = existing.token_value,
-    token_hash = encode(digest(existing.token_value, 'sha256'), 'hex'),
+    token_hash = encode(extensions.digest(existing.token_value, 'sha256'), 'hex'),
     expires_at = now() + interval '365 days'
 FROM existing
 WHERE token.id = existing.id;
 
 WITH missing AS (
-    SELECT o.id, encode(gen_random_bytes(32), 'hex') AS token_value
+    SELECT o.id, encode(extensions.gen_random_bytes(32), 'hex') AS token_value
     FROM orders o
     WHERE o.status IN ('assigned', 'preparing', 'out_for_delivery')
       AND NOT EXISTS (
@@ -194,7 +194,7 @@ WITH missing AS (
       )
 )
 INSERT INTO delivery_confirmation_tokens(order_id, token_hash, token_value, expires_at)
-SELECT id, encode(digest(token_value, 'sha256'), 'hex'), token_value, now() + interval '365 days'
+SELECT id, encode(extensions.digest(token_value, 'sha256'), 'hex'), token_value, now() + interval '365 days'
 FROM missing
 ON CONFLICT DO NOTHING;
 
