@@ -1,5 +1,5 @@
-const CACHE_NAME = 'talagty-customer-v1';
-const LOCAL_ASSETS = ['./track.html', './track.css?v=customer-device-1', './track.js?v=customer-device-1', './style.css?v=customer-responsive-1', './api-config.js'];
+const CACHE_NAME = 'talagty-customer-v2';
+const LOCAL_ASSETS = ['./track.html', './track.css?v=manual-whatsapp-1', './track.js?v=manual-whatsapp-1', './style.css?v=customer-responsive-1', './api-config.js'];
 const QR_LIBRARY = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
 
 self.addEventListener('install', event => {

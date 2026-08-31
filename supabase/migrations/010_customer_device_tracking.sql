@@ -13,9 +13,12 @@ CREATE INDEX IF NOT EXISTS ix_customers_device_id_hash
 CREATE TABLE IF NOT EXISTS customer_otp_challenges (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_id BIGINT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    order_id BIGINT REFERENCES orders(id) ON DELETE CASCADE,
+    created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
     phone_normalized VARCHAR(20) NOT NULL,
-    device_id_hash VARCHAR(128) NOT NULL,
-    provider VARCHAR(32) NOT NULL DEFAULT 'twilio_verify',
+    device_id_hash VARCHAR(128),
+    code_hash VARCHAR(128) NOT NULL,
+    provider VARCHAR(32) NOT NULL DEFAULT 'manual_whatsapp',
     provider_reference VARCHAR(160),
     status VARCHAR(20) NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'approved', 'expired', 'failed', 'cancelled')),
@@ -25,11 +28,52 @@ CREATE TABLE IF NOT EXISTS customer_otp_challenges (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- These ALTER statements keep this migration safe if the earlier SMS draft was
+-- already created in the project before manual WhatsApp activation was selected.
+ALTER TABLE customer_otp_challenges ADD COLUMN IF NOT EXISTS order_id BIGINT REFERENCES orders(id) ON DELETE CASCADE;
+ALTER TABLE customer_otp_challenges ADD COLUMN IF NOT EXISTS created_by BIGINT REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE customer_otp_challenges ADD COLUMN IF NOT EXISTS code_hash VARCHAR(128);
+ALTER TABLE customer_otp_challenges ALTER COLUMN device_id_hash DROP NOT NULL;
+ALTER TABLE customer_otp_challenges ALTER COLUMN provider SET DEFAULT 'manual_whatsapp';
+
 CREATE INDEX IF NOT EXISTS ix_customer_otp_phone_created
     ON customer_otp_challenges(phone_normalized, created_at DESC);
 CREATE INDEX IF NOT EXISTS ix_customer_otp_cleanup
     ON customer_otp_challenges(expires_at)
     WHERE status = 'pending';
+
+CREATE INDEX IF NOT EXISTS ix_customer_otp_customer_created
+    ON customer_otp_challenges(customer_id, created_at DESC);
+
+CREATE OR REPLACE FUNCTION public.get_customer_activation_challenge(
+    p_customer_id BIGINT
+) RETURNS TABLE (
+    challenge_id UUID,
+    phone_normalized VARCHAR,
+    expires_at TIMESTAMPTZ
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    UPDATE customer_otp_challenges AS challenge
+    SET status = 'expired'
+    WHERE challenge.customer_id = p_customer_id
+      AND challenge.status = 'pending'
+      AND challenge.expires_at <= now();
+
+    RETURN QUERY
+    SELECT challenge.id, challenge.phone_normalized, challenge.expires_at
+    FROM customer_otp_challenges challenge
+    WHERE challenge.customer_id = p_customer_id
+      AND challenge.status = 'pending'
+      AND challenge.expires_at > now()
+      AND challenge.code_hash IS NOT NULL
+    ORDER BY challenge.created_at DESC
+    LIMIT 1;
+END;
+$$;
 
 ALTER TABLE delivery_confirmation_tokens ADD COLUMN IF NOT EXISTS token_value TEXT;
 ALTER TABLE delivery_confirmation_tokens ALTER COLUMN expires_at SET DEFAULT (now() + interval '365 days');
@@ -212,9 +256,11 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.bind_customer_device(BIGINT, VARCHAR) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_customer_activation_challenge(BIGINT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.customer_cancel_order(UUID, BIGINT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.ensure_order_delivery_token() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.bind_customer_device(BIGINT, VARCHAR) TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_customer_activation_challenge(BIGINT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.customer_cancel_order(UUID, BIGINT) TO service_role;
 
 -- Customer and delivery secrets must never be readable through the public REST API.

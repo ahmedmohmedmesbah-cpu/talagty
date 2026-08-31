@@ -9,9 +9,6 @@ const bootstrapPassword = Deno.env.get('BOOTSTRAP_ADMIN_PASSWORD')!
 const adminReportEmail = Deno.env.get('ADMIN_REPORT_EMAIL') || bootstrapEmail
 const resendApiKey = Deno.env.get('RESEND_API_KEY') || ''
 const reportFromEmail = Deno.env.get('REPORT_FROM_EMAIL') || 'Tallagty <onboarding@resend.dev>'
-const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID') || ''
-const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN') || ''
-const twilioVerifyServiceSid = Deno.env.get('TWILIO_VERIFY_SERVICE_SID') || ''
 const admin = createClient(projectUrl, serviceRoleKey, { auth: { persistSession: false } })
 const allowedOrigins = new Set(['https://ahmedmohmedmesbah-cpu.github.io', 'http://127.0.0.1:8040', 'http://localhost:8040'])
 
@@ -174,43 +171,6 @@ async function requireCustomer(request: Request) {
   return claims
 }
 
-function twilioHeaders() {
-  return {
-    Authorization: 'Basic ' + btoa(twilioAccountSid + ':' + twilioAuthToken),
-    'Content-Type': 'application/x-www-form-urlencoded',
-  }
-}
-
-async function sendCustomerOtp(phone: string) {
-  if (!twilioAccountSid || !twilioAuthToken || !twilioVerifyServiceSid) {
-    throw new Error('خدمة رسائل SMS غير مفعلة بعد. يجب إضافة بيانات مزود الرسائل في Supabase.')
-  }
-  const result = await fetch(`https://verify.twilio.com/v2/Services/${twilioVerifyServiceSid}/Verifications`, {
-    method: 'POST',
-    headers: twilioHeaders(),
-    body: new URLSearchParams({ To: phone, Channel: 'sms' }),
-  })
-  const payload = await result.json().catch(() => ({}))
-  if (!result.ok) {
-    console.error('Twilio verification request failed', payload)
-    throw new Error('تعذر إرسال رمز التحقق حالياً. تأكد من الرقم وحاول مرة أخرى.')
-  }
-  return String(payload.sid || '')
-}
-
-async function verifyCustomerOtp(phone: string, code: string) {
-  if (!twilioAccountSid || !twilioAuthToken || !twilioVerifyServiceSid) {
-    throw new Error('خدمة رسائل SMS غير مفعلة بعد. يجب إضافة بيانات مزود الرسائل في Supabase.')
-  }
-  const result = await fetch(`https://verify.twilio.com/v2/Services/${twilioVerifyServiceSid}/VerificationCheck`, {
-    method: 'POST',
-    headers: twilioHeaders(),
-    body: new URLSearchParams({ To: phone, Code: code }),
-  })
-  const payload = await result.json().catch(() => ({}))
-  return result.ok && payload.status === 'approved'
-}
-
 async function ensureBootstrapAdmin() {
   const email = bootstrapEmail.trim().toLowerCase()
   const { data } = await admin.from('users').select('id').eq('email', email).maybeSingle()
@@ -277,6 +237,7 @@ function mapOrder(order: any) {
   return {
     database_id: order.id, order_id: order.public_id, order_number: order.order_number,
     customer_name: customer?.full_name, customer_phone: customer?.phone_normalized, customer_address_text: order.delivery_address,
+    customer_device_bound: Boolean(customer?.phone_verified_at && customer?.device_id_hash),
     admin_note: order.admin_note, status: order.status, subtotal: Number(order.subtotal), delivery_fee: Number(order.delivery_fee || 0),
     total: Number(order.total), payment_method: order.payment_method, amount_paid: Number(order.amount_paid || 0), currency: order.currency || 'EGP',
     created_at: order.created_at, updated_at: order.updated_at, approved_at: order.approved_at, completed_at: order.completed_at,
@@ -286,7 +247,7 @@ function mapOrder(order: any) {
   }
 }
 
-const orderSelect = 'id,public_id,order_number,delivery_address,admin_note,status,subtotal,delivery_fee,total,payment_method,amount_paid,currency,created_at,updated_at,approved_at,completed_at,customers(full_name,phone_normalized),order_items(id,product_sku,product_name_ar,quantity,unit_price,line_total),suppliers(id,users(full_name)),order_supplier_assignments(id,is_primary,suppliers(id,users(full_name))),order_status_history(previous_status,new_status,note,created_at)'
+const orderSelect = 'id,public_id,order_number,delivery_address,admin_note,status,subtotal,delivery_fee,total,payment_method,amount_paid,currency,created_at,updated_at,approved_at,completed_at,customers(full_name,phone_normalized,phone_verified_at,device_id_hash),order_items(id,product_sku,product_name_ar,quantity,unit_price,line_total),suppliers(id,users(full_name)),order_supplier_assignments(id,is_primary,suppliers(id,users(full_name))),order_status_history(previous_status,new_status,note,created_at)'
 
 async function getOrders(phone?: string, supplierUserId?: number, customerId?: number) {
   let orderIds: number[] | null = null
@@ -378,7 +339,7 @@ Deno.serve(async (request) => {
   const url = new URL(request.url)
   const route = url.pathname.replace(/^\/(?:functions\/v1\/)?talagty-api(?=\/|$)/, '') || '/'
   try {
-    if (request.method === 'GET' && route === '/health') return response(request, { status: 'ok', version: '2.0' })
+    if (request.method === 'GET' && route === '/health') return response(request, { status: 'ok', version: '2.1-manual-whatsapp' })
     if (request.method === 'GET' && route === '/api/catalog') return response(request, { categories: await listCategories(), products: await listProducts() })
 
     if (request.method === 'POST' && route === '/api/customer/auth/request-code') {
@@ -394,25 +355,12 @@ Deno.serve(async (request) => {
       if (!customer) return apiError(request, 'لا يوجد طلب مرتبط بهذا الرقم', 404)
       if (customer.device_id_hash && customer.device_id_hash !== deviceHash) return apiError(request, 'هذا الرقم مرتبط بجهاز آخر. تواصل مع الإدارة لتغيير الجهاز.', 409, { device_mismatch: true })
 
-      const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString()
-      const { count: recentCount } = await admin.from('customer_otp_challenges').select('id', { count: 'exact', head: true }).eq('phone_normalized', phone).gte('created_at', oneMinuteAgo)
-      if ((recentCount ?? 0) > 0) return apiError(request, 'انتظر دقيقة قبل طلب رمز جديد', 429, { retry_after_seconds: 60 })
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-      const { count: hourlyCount } = await admin.from('customer_otp_challenges').select('id', { count: 'exact', head: true }).eq('phone_normalized', phone).gte('created_at', oneHourAgo)
-      if ((hourlyCount ?? 0) >= 5) return apiError(request, 'تم تجاوز عدد محاولات الإرسال. حاول بعد ساعة.', 429)
-
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
-      const { data: challenge, error: challengeError } = await admin.from('customer_otp_challenges').insert({ customer_id: customer.id, phone_normalized: phone, device_id_hash: deviceHash, expires_at: expiresAt }).select('id').single()
+      const { data: challengeRows, error: challengeError } = await admin.rpc('get_customer_activation_challenge', { p_customer_id: customer.id })
       if (challengeError) throw challengeError
-      try {
-        const providerReference = await sendCustomerOtp(phone)
-        await admin.from('customer_otp_challenges').update({ provider_reference: providerReference }).eq('id', challenge.id)
-      } catch (error) {
-        await admin.from('customer_otp_challenges').update({ status: 'failed' }).eq('id', challenge.id)
-        return apiError(request, error instanceof Error ? error.message : 'تعذر إرسال رمز التحقق', 503)
-      }
+      const challenge = Array.isArray(challengeRows) ? challengeRows[0] : challengeRows
+      if (!challenge) return apiError(request, 'لم ترسل الإدارة كود التفعيل عبر واتساب بعد. تواصل مع الإدارة بعد تأكيد الطلب.', 404, { activation_required: true })
       const maskedPhone = phone.slice(0, 4) + '••••' + phone.slice(-3)
-      return response(request, { challenge_id: challenge.id, masked_phone: maskedPhone, expires_in_seconds: 600 })
+      return response(request, { challenge_id: challenge.challenge_id, masked_phone: maskedPhone, expires_in_seconds: Math.max(0, Math.floor((new Date(challenge.expires_at).getTime() - Date.now()) / 1000)) })
     }
 
     if (request.method === 'POST' && route === '/api/customer/auth/verify-code') {
@@ -421,18 +369,16 @@ Deno.serve(async (request) => {
       const deviceId = String(body.device_id ?? '')
       const code = String(body.code ?? '').trim()
       if (!/^[0-9]{4,10}$/.test(code) || deviceId.length < 16) return apiError(request, 'رمز التحقق غير صحيح', 422)
-      const { data: challenge } = await admin.from('customer_otp_challenges').select('id,customer_id,phone_normalized,device_id_hash,status,attempts,expires_at').eq('id', challengeId).maybeSingle()
-      if (!challenge || challenge.status !== 'pending') return apiError(request, 'طلب التحقق غير صالح. اطلب رمزاً جديداً.', 401)
+      const { data: challenge } = await admin.from('customer_otp_challenges').select('id,customer_id,phone_normalized,device_id_hash,code_hash,status,attempts,expires_at').eq('id', challengeId).maybeSingle()
+      if (!challenge || challenge.status !== 'pending') return apiError(request, 'كود التفعيل غير صالح. اطلب من الإدارة إرسال كود واتساب جديد.', 401)
       if (new Date(challenge.expires_at).getTime() <= Date.now()) {
         await admin.from('customer_otp_challenges').update({ status: 'expired' }).eq('id', challenge.id)
-        return apiError(request, 'انتهت صلاحية الرمز. اطلب رمزاً جديداً.', 401)
+        return apiError(request, 'انتهت صلاحية الكود. اطلب من الإدارة إرسال كود واتساب جديد.', 401)
       }
       const deviceHash = await sha256(deviceId)
-      if (challenge.device_id_hash !== deviceHash) return apiError(request, 'هذا الرمز غير صالح لهذا الجهاز', 403)
-      if (Number(challenge.attempts) >= 5) return apiError(request, 'تم تجاوز عدد محاولات التحقق. اطلب رمزاً جديداً.', 429)
-      let approved = false
-      try { approved = await verifyCustomerOtp(challenge.phone_normalized, code) }
-      catch (error) { return apiError(request, error instanceof Error ? error.message : 'تعذر التحقق من الرمز', 503) }
+      if (challenge.device_id_hash && challenge.device_id_hash !== deviceHash) return apiError(request, 'هذا الرمز غير صالح لهذا الجهاز', 403)
+      if (Number(challenge.attempts) >= 5) return apiError(request, 'تم تجاوز عدد المحاولات. اطلب من الإدارة إرسال كود واتساب جديد.', 429)
+      const approved = challenge.code_hash === await sha256(`${jwtSecret}:${challenge.customer_id}:${code}`)
       if (!approved) {
         const attempts = Number(challenge.attempts) + 1
         await admin.from('customer_otp_challenges').update({ attempts, status: attempts >= 5 ? 'failed' : 'pending' }).eq('id', challenge.id)
@@ -440,7 +386,7 @@ Deno.serve(async (request) => {
       }
       const { data: bound, error: bindError } = await admin.rpc('bind_customer_device', { p_customer_id: challenge.customer_id, p_device_id_hash: deviceHash })
       if (bindError) return apiError(request, bindError.message, 409)
-      await admin.from('customer_otp_challenges').update({ status: 'approved', verified_at: new Date().toISOString() }).eq('id', challenge.id)
+      await admin.from('customer_otp_challenges').update({ status: 'approved', device_id_hash: deviceHash, verified_at: new Date().toISOString() }).eq('id', challenge.id)
       const customer = typeof bound === 'string' ? JSON.parse(bound) : bound
       return response(request, {
         access_token: await issueToken(Number(customer.customer_id), 'customer', deviceHash, 365 * 24 * 60 * 60),
@@ -519,6 +465,50 @@ Deno.serve(async (request) => {
       if (!claims) return apiError(request, 'يلزم تسجيل الدخول كمدير', 401)
 
       if (request.method === 'GET' && route === '/api/admin/orders') return response(request, await getOrders())
+      const customerActivationMatch = route.match(/^\/api\/admin\/orders\/([^/]+)\/customer-activation$/)
+      if (request.method === 'POST' && customerActivationMatch) {
+        const { data: order, error: orderError } = await admin.from('orders')
+          .select('id,public_id,order_number,status,customer_id,customers(full_name,phone_normalized,phone_verified_at,device_id_hash)')
+          .eq('public_id', customerActivationMatch[1])
+          .maybeSingle()
+        if (orderError) throw orderError
+        if (!order) return apiError(request, 'الطلب غير موجود', 404)
+        if (!['approved', 'assigned', 'preparing', 'out_for_delivery'].includes(order.status)) {
+          return apiError(request, 'يجب تأكيد الطلب أولاً قبل إرسال كود التفعيل', 422)
+        }
+        const customer = relationOne(order.customers)
+        if (!customer?.phone_normalized) return apiError(request, 'رقم هاتف العميل غير موجود', 422)
+        if (customer.phone_verified_at && customer.device_id_hash) {
+          return apiError(request, 'تم تفعيل هذا العميل وربط رقمه بجهازه بالفعل', 409, { already_activated: true })
+        }
+        const phone = normalizeCustomerPhone(customer.phone_normalized)
+        if (!/^\+[1-9][0-9]{7,14}$/.test(phone)) return apiError(request, 'رقم هاتف العميل غير صالح لواتساب', 422)
+
+        await admin.from('customer_otp_challenges').update({ status: 'cancelled' }).eq('customer_id', order.customer_id).eq('status', 'pending')
+        const activationCode = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0')
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+        const codeHash = await sha256(`${jwtSecret}:${order.customer_id}:${activationCode}`)
+        const { data: challenge, error: challengeError } = await admin.from('customer_otp_challenges').insert({
+          customer_id: order.customer_id,
+          order_id: order.id,
+          created_by: claims.sub,
+          phone_normalized: phone,
+          code_hash: codeHash,
+          provider: 'manual_whatsapp',
+          expires_at: expiresAt,
+        }).select('id').single()
+        if (challengeError) throw challengeError
+
+        const message = `مرحباً ${customer.full_name || ''}،\nرمز تفعيل متابعة طلباتك على تلاجتى هو: ${activationCode}\nصلاحية الرمز 10 دقائق. لا تشاركه مع أي شخص.`
+        return response(request, {
+          challenge_id: challenge.id,
+          activation_code: activationCode,
+          expires_at: expiresAt,
+          expires_in_seconds: 600,
+          masked_phone: phone.slice(0, 4) + '••••' + phone.slice(-3),
+          whatsapp_url: `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`,
+        }, 201)
+      }
       const reviewMatch = route.match(/^\/api\/admin\/orders\/([^/]+)\/review$/)
       if (request.method === 'PATCH' && reviewMatch) {
         const body = await parseBody(request)

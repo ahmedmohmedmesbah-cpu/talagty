@@ -7,7 +7,7 @@
     <meta name="description" content="متابعة طلبات تلاجتى بأمان من هاتف العميل">
     <title>متابعة فاتورتك - تلاجتى</title>
     <link rel="stylesheet" href="style.css?v=customer-responsive-1">
-    <link rel="stylesheet" href="track.css?v=customer-device-1">
+    <link rel="stylesheet" href="track.css?v=manual-whatsapp-1">
 </head>
 <body class="track-body">
     <header class="track-header">
@@ -22,20 +22,20 @@
         <section class="track-auth-card" id="phone-view">
             <span class="track-kicker">متابعة آمنة</span>
             <h1>تابع كل طلباتك</h1>
-            <p>أدخل رقم الهاتف المستخدم في الطلب. سنرسل رمز تحقق مرة واحدة ثم نربط الرقم بهذا الجهاز.</p>
+            <p>بعد تأكيد طلبك، سترسل لك الإدارة كود تفعيل عبر واتساب. أدخل رقم الهاتف المستخدم في الطلب للمتابعة.</p>
             <form id="phone-form" class="track-form">
                 <label for="track-phone">رقم الهاتف</label>
                 <input id="track-phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="01xxxxxxxxx" maxlength="16">
-                <button type="submit">إرسال رمز التحقق</button>
+                <button type="submit">متابعة وإدخال كود واتساب</button>
             </form>
             <p class="track-note">بعد التفعيل لن يُفتح هذا الرقم من جهاز آخر لحماية بيانات طلباتك.</p>
             <p id="phone-message" class="track-message" aria-live="polite"></p>
         </section>
 
         <section class="track-auth-card" id="otp-view" hidden>
-            <span class="track-kicker">تأكيد رقم الهاتف</span>
-            <h1>أدخل رمز الرسالة</h1>
-            <p>أرسلنا رمزاً إلى <strong id="masked-phone"></strong>. الرمز صالح لمدة 10 دقائق.</p>
+            <span class="track-kicker">تفعيل عبر واتساب</span>
+            <h1>أدخل كود واتساب</h1>
+            <p>أدخل الكود الذي أرسلته لك الإدارة على واتساب للرقم <strong id="masked-phone"></strong>. الكود صالح لمدة 10 دقائق.</p>
             <form id="otp-form" class="track-form">
                 <label for="track-code">رمز التحقق</label>
                 <input id="track-code" class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{4,10}" maxlength="10" placeholder="ــــــ">
@@ -69,6 +69,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="api-config.js"></script>
-    <script src="track.js?v=customer-device-1"></script>
+    <script src="track.js?v=manual-whatsapp-1"></script>
 </body>
 </html>

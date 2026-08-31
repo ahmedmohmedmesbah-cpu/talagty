@@ -75,13 +75,13 @@
             orders = await request('/api/customer/orders'); localStorage.setItem(ordersKey, JSON.stringify(orders)); renderOrders();
             setMessage('orders-message', 'تم تحديث الطلبات', false); setTimeout(() => setMessage('orders-message'), 1600);
         } catch (error) {
-            if (error.status === 401) { token = ''; localStorage.removeItem(tokenKey); showView('phone-view'); setMessage('phone-message', 'انتهت جلسة الحماية. أرسل رمز تحقق جديداً.'); return; }
+            if (error.status === 401) { token = ''; localStorage.removeItem(tokenKey); showView('phone-view'); setMessage('phone-message', 'انتهت جلسة الحماية. اطلب من الإدارة كود تفعيل واتساب جديداً.'); return; }
             if (orders.length) setMessage('orders-message', 'تعذر الاتصال. نعرض آخر نسخة محفوظة على هذا الجهاز.'); else setMessage('orders-message', error.message);
         }
     }
 
     $('phone-form').addEventListener('submit', async event => {
-        event.preventDefault(); const button = event.currentTarget.querySelector('button[type="submit"]'); phone = $('track-phone').value.trim(); setMessage('phone-message'); setBusy(button, true, 'جاري الإرسال…');
+        event.preventDefault(); const button = event.currentTarget.querySelector('button[type="submit"]'); phone = $('track-phone').value.trim(); setMessage('phone-message'); setBusy(button, true, 'جاري التحقق…');
         try { const result = await request('/api/customer/auth/request-code', { method: 'POST', body: { phone, device_id: deviceId } }); challengeId = result.challenge_id; $('masked-phone').textContent = result.masked_phone; showView('otp-view'); $('track-code').focus(); }
         catch (error) { setMessage('phone-message', error.message); } finally { setBusy(button, false); }
     });
