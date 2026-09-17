@@ -1,20 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    let PRODUCTS_DATA = [
-        { id: 'mc1', name: 'حليب كامل الدسم', price: 18.00, imageUrl: 'https://picsum.photos/400/400?random=30' },
-        { id: 'mc2', name: 'قشدة طازجة', price: 22.00, imageUrl: 'https://picsum.photos/400/400?random=31' },
-        { id: 'ch1', name: 'جبن شيدر', price: 40.00, imageUrl: 'https://picsum.photos/400/400?random=33' },
-        { id: 'ch2', name: 'جبن موتزاريلا', price: 35.00, imageUrl: 'https://picsum.photos/400/400?random=34' },
-        { id: 'ln1', name: 'لانشون بيتزا', price: 50.00, imageUrl: 'assets/لانشون بيتزا.jpg' },
-        { id: 'ln2', name: 'لانشون لحم مدخن', price: 45.00, imageUrl: 'assets/لانشون لحم مدخن.jpg' },
-        { id: 'ln3', name: 'لانشون كوردن بلو', price: 48.00, imageUrl: 'assets/لانشون كوردن بلو.jpg' },
-        { id: 'ln4', name: 'لانشون فراخ مدخن', price: 52.00, imageUrl: 'assets/لانشون فراخ مدخن.jpg' },
-        { id: 'ln5', name: 'لانشون سجق', price: 47.00, imageUrl: 'assets/لانشون سجق.jpg' },
-        { id: 'ln6', name: 'لانشون بالفلفل الاسود', price: 46.00, imageUrl: 'assets/لانشون بالفلفل الاسود.jpg' },
-        { id: 'ln7', name: 'لانشون ساده', price: 44.00, imageUrl: 'assets/لانشون ساده.jpg' },
-        { id: 'ln8', name: 'لانشون ديك رومى', price: 49.00, imageUrl: 'assets/لانشون ديك رومى.jpg' }
-    ];
-    let PRODUCTS_MAP = Object.fromEntries(PRODUCTS_DATA.map(p => [p.id, p]));
+    let PRODUCTS_DATA = [];
+    let PRODUCTS_MAP = {};
+    let catalogState = 'loading';
     const ORDER_API_BASE_URL = (window.TALLAGTY_API_BASE_URL || '').replace(/\/$/, '');
     const currencyFmt = new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' });
     const pageFile = location.pathname.split('/').pop() || 'index.html';
@@ -133,7 +121,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const cartSubtotalEl = document.getElementById('cart-subtotal');
         if (cartSubtotalEl) {
             const subtotal = cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0);
-            cartSubtotalEl.textContent = currencyFmt.format(subtotal);
+            cartSubtotalEl.textContent = catalogState === 'ready' ? currencyFmt.format(subtotal) : '—';
+        }
+        const checkoutButton = document.getElementById('go-to-checkout-btn');
+        if (checkoutButton) {
+            checkoutButton.disabled = catalogState !== 'ready';
+            checkoutButton.textContent = catalogState === 'ready' ? 'المتابعة لإتمام الطلب' : catalogState === 'error' ? 'المنتجات غير متاحة حالياً' : 'جاري تحميل المنتجات…';
         }
     };
 
@@ -149,7 +142,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const footer = cartSidebar.querySelector('.cart-sidebar__footer');
             if (footer) footer.style.display = 'block';
 
+            if (catalogState !== 'ready') {
+                cartBody.innerHTML = '<p class="cart-sidebar__empty">تعذر عرض السلة حتى يتم تحميل المنتجات.</p>';
+            }
+
             cart.forEach(item => {
+                if (catalogState !== 'ready') return;
                 const product = PRODUCTS_MAP[item.id];
                 if (!product) return;
                 const lineTotal = product.price * item.quantity;
@@ -178,11 +176,16 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const loadLiveCatalog = async () => {
-        if (!ORDER_API_BASE_URL) return;
+        if (productGrid) {
+            productGrid.innerHTML = '<p class="catalog-message">جاري تحميل المنتجات…</p>';
+            productGrid.style.removeProperty('display');
+        }
         try {
+            if (!ORDER_API_BASE_URL) throw new Error('Catalog API URL is not configured');
             const response = await fetch(`${ORDER_API_BASE_URL}/api/catalog`);
-            if (!response.ok) return;
+            if (!response.ok) throw new Error(`Catalog request failed: ${response.status}`);
             const catalog = await response.json();
+            if (!Array.isArray(catalog.products)) throw new Error('Invalid catalog response');
             PRODUCTS_DATA = (catalog.products || []).map(product => ({
                 id: product.sku,
                 name: product.name_ar,
@@ -197,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cart = cart.filter(item => PRODUCTS_MAP[item.id]);
             saveCart();
             const pageCategory = { 'category1.html': 'dairy', 'category2.html': 'cheese', 'category3.html': 'luncheon' }[pageFile];
-            const grid = document.querySelector('.product-grid');
+            const grid = productGrid;
             if (grid && pageCategory) {
                 const products = PRODUCTS_DATA.filter(product => product.categorySlug === pageCategory);
                 grid.innerHTML = products.length ? products.map(product => `
@@ -211,15 +214,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <button class="btn btn-primary product-card__btn add-to-cart-btn" type="button" data-product-id="${escapeHtml(product.id)}" ${product.stock <= 0 ? 'disabled' : ''}>${product.stock <= 0 ? 'غير متوفر' : 'أضف إلى السلة'}</button>
                             </div>
                         </div>
-                    </article>`).join('') : '<p class="cart-sidebar__empty">لا توجد منتجات متاحة في هذه الفئة.</p>';
+                    </article>`).join('') : '<p class="catalog-message">لا توجد منتجات متاحة في هذه الفئة.</p>';
             }
+            catalogState = 'ready';
             renderCart();
         } catch (error) {
-            console.warn('تعذر تحميل الكتالوج المباشر، سيتم عرض النسخة المحفوظة.', error);
+            catalogState = 'error';
+            if (productGrid) productGrid.innerHTML = '<p class="catalog-message">تعذر تحميل المنتجات الآن. حاول تحديث الصفحة بعد قليل.</p>';
+            renderCart();
+            console.warn('تعذر تحميل الكتالوج المباشر.', error);
         }
     };
 
     const addToCart = (productId) => {
+        if (catalogState !== 'ready' || !PRODUCTS_MAP[productId]) return;
         const existingItem = cart.find(item => item.id === productId);
         if (existingItem) {
             existingItem.quantity++;
@@ -387,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        if (e.target.id === 'go-to-checkout-btn') {
+        if (e.target.id === 'go-to-checkout-btn' && catalogState === 'ready') {
             closeAllSidebars();
             openSidebar(document.getElementById('checkout-sidebar'));
         }

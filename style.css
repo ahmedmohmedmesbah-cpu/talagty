@@ -413,77 +413,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .category-quick-nav a[aria-current="page"] { background: #e8faff; border-color: var(--primary-color); color: #086d83; }
 
 
-/* ===== WIDGETS ===== */
-.widget-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-    gap: clamp(2rem, 5vw, 3rem);
-}
-
-.widget {
-    text-align: center;
-}
-
-.widget__icon {
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    width: 64px;
-    height: 64px;
-    background-color: var(--primary-color);
-    color: white;
-    border-radius: 50%;
-    margin-bottom: 1.5rem;
-}
-
-    .widget__icon svg {
-        width: 32px;
-        height: 32px;
-    }
-
-.widget__title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-}
-
-.widget p {
-    color: var(--text-muted);
-    max-width: 300px;
-    margin: 0 auto;
-}
-
-/* ===== LOGOS ===== */
-.logos-grid {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    gap: clamp(1.5rem, 6vw, 4rem);
-}
-
-    .logos-grid img {
-        height: 36px;
-        opacity: 0.5;
-        transition: opacity 0.3s ease;
-        filter: grayscale(100%);
-    }
-
-        .logos-grid img:hover {
-            opacity: 1;
-            filter: grayscale(0%);
-        }
-
-/* ===== CONTACT FORM ===== */
-.contact-form {
-    max-width: 600px;
-    margin: 0 auto;
-    background: white;
-    padding: clamp(1.1rem, 5vw, 2.5rem);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
-}
-
+/* ===== CHECKOUT FORM ===== */
 .form-group {
     margin-bottom: 1.5rem;
 }
@@ -509,11 +439,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
         }
-
-.contact-form__btn {
-    width: 100%;
-    border-radius: var(--radius-sm);
-}
 
 .checkout-note { margin: .25rem 0 0; padding: .8rem; border-radius: .65rem; background: #e8faff; color: #285969; font-size: .92rem; line-height: 1.5; }
 
@@ -550,11 +475,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
     margin-bottom: 0.75rem;
 }
 
-.footer-socials {
-    display: flex;
-    gap: 1rem;
-}
-
 .footer-bottom {
     margin-top: 4rem;
     padding: 1.5rem 0;
@@ -581,6 +501,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
     gap: clamp(1rem, 3vw, 2rem);
+}
+
+.catalog-message {
+    grid-column: 1 / -1;
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    background: white;
+    color: var(--text-muted);
+    text-align: center;
 }
 
 .product-card {
