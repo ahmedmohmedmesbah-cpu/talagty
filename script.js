@@ -427,4 +427,5 @@ document.addEventListener('DOMContentLoaded', () => {
     loadLiveCatalog();
     if (new URLSearchParams(location.search).has('cart')) openSidebar(cartSidebar);
     document.addEventListener('keydown', event => { if (event.key === 'Escape') closeAllSidebars(); });
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./track-sw.js?v=4').catch(() => {});
 });

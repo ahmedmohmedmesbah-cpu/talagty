@@ -108,6 +108,6 @@
     $('notifications-button').addEventListener('click', () => { $('notifications-sheet').hidden = false; }); $('close-scanner').addEventListener('click', stopCamera); $('confirm-manual-code').addEventListener('click', () => confirmDelivery($('manual-delivery-code').value.trim()));
     window.addEventListener('online', async () => { $('connection-status').textContent = 'متصل'; await flushPendingDeliveries(); loadData(); }); window.addEventListener('offline', () => { $('connection-status').textContent = 'دون اتصال'; toast('لا يوجد اتصال. ستظهر آخر بيانات محفوظة.', true); });
     window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; $('install-app').hidden = false; }); $('install-app').addEventListener('click', async () => { if (!installPrompt) return; await installPrompt.prompt(); installPrompt = null; $('install-app').hidden = true; });
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./supplier-sw.js').catch(() => {});
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./track-sw.js?v=4').catch(() => {});
     if (previewMode) { showApp(); loadData(); } else if (token) { showApp(); flushPendingDeliveries().then(loadData); } else showAuth();
 })();
