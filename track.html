@@ -6,8 +6,11 @@
     <meta name="theme-color" content="#06b6d4">
     <meta name="description" content="متابعة طلبات تلاجتى بأمان من هاتف العميل">
     <title>متابعة فاتورتك - تلاجتى</title>
-    <link rel="stylesheet" href="style.css?v=customer-responsive-1">
+    <link rel="stylesheet" href="style.css?v=store-mobile-v2">
     <link rel="stylesheet" href="track.css?v=manual-whatsapp-1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body class="track-body">
     <header class="track-header">
@@ -66,6 +69,13 @@
             <p id="receipt-offline-note" class="receipt-offline-note"></p>
         </div>
     </div>
+
+    <nav class="mobile-bottom-nav" aria-label="التنقل السريع">
+        <a href="index.html" aria-label="الرئيسية"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>الرئيسية</span></a>
+        <a href="index.html#categories" aria-label="فئات المنتجات"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>الفئات</span></a>
+        <a href="track.html" aria-current="page" aria-label="متابعة طلباتي"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h10l3 3v15H4V3h3z"/><path d="M8 10h8M8 14h8M8 18h5"/></svg><span>طلباتي</span></a>
+        <a href="index.html?cart=1" aria-label="فتح سلة المشتريات"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2l2 11h12l2-8H6M9 20h.01M17 20h.01"/></svg><span>السلة</span></a>
+    </nav>
 
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="api-config.js"></script>

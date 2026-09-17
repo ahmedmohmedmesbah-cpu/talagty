@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>تلاجتى - منتجات الألبان المميزة للأعمال</title>
-    <link rel="stylesheet" href="style.css?v=customer-responsive-1">
+    <link rel="stylesheet" href="style.css?v=store-mobile-v2">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -38,11 +38,11 @@
                 </ul>
             </div>
             <div class="nav__actions">
-                <button class="nav__cart-btn" id="cart-toggle">
+                <button class="nav__cart-btn" id="cart-toggle" type="button" aria-label="فتح سلة المشتريات">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.658-.463 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
                     <span class="nav__cart-count" id="cart-count">0</span>
                 </button>
-                <button class="nav__toggle" id="nav-toggle">
+                <button class="nav__toggle" id="nav-toggle" type="button" aria-label="فتح القائمة">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
                 </button>
             </div>
@@ -55,8 +55,8 @@
             <div class="hero-slider__wrapper">
                 <div class="hero-slider__slide active" style="background-image: url('https://picsum.photos/1600/900?random=1');">
                     <div class="hero-slider__content">
-                        <h1>منتجات ألبان مميزة لأعمالك</h1>
-                        <p>شراكة مع تلاجتى لأجود الحليب، الجبن الحرفي، والمنتجات المخمرة، مع توصيل موثوق.</p>
+                        <h1>منتجات طازجة لطلبك اليومي</h1>
+                        <p>تصفح الألبان والأجبان واللانشون، واختر ما تحتاجه في خطوات بسيطة.</p>
                         <a href="#categories" class="btn btn-primary">عرض المنتجات</a>
                     </div>
                 </div>
@@ -75,26 +75,26 @@
                     </div>
                 </div>
             </div>
-            <button class="hero-slider__btn hero-slider__btn--prev">&lt;</button>
-            <button class="hero-slider__btn hero-slider__btn--next">&gt;</button>
+            <button class="hero-slider__btn hero-slider__btn--prev" type="button" aria-label="الصورة السابقة">&lt;</button>
+            <button class="hero-slider__btn hero-slider__btn--next" type="button" aria-label="الصورة التالية">&gt;</button>
             <div class="hero-slider__dots"></div>
         </section>
 
         <!-- Categories -->
         <section id="categories" class="section">
             <div class="container">
-                <h2 class="section__title">فئات منتجاتنا</h2>
-                <p class="section__subtitle">استكشف مجموعتنا المتنوعة من المنتجات، المصممة لتلبية احتياجات السوبرماركت والأعمال الغذائية الحديثة.</p>
+                <h2 class="section__title">تسوق حسب الفئة</h2>
+                <p class="section__subtitle">اختر الفئة المناسبة لتجد منتجاتك بسرعة.</p>
                 <div class="category-grid">
-                    <a href="category1.html" class="category-card">
+                    <a href="category1.html" class="category-card" aria-label="تصفح منتجات الألبان">
                         <img src="https://picsum.photos/400/500?random=10" alt="البان">
-                        <h3>البان</h3>
+                        <h3>ألبان</h3>
                     </a>
-                    <a href="category2.html" class="category-card">
+                    <a href="category2.html" class="category-card" aria-label="تصفح منتجات الأجبان">
                         <img src="https://picsum.photos/400/500?random=11" alt="اجبان">
-                        <h3>اجبان</h3>
+                        <h3>أجبان</h3>
                     </a>
-                    <a href="category3.html" class="category-card">
+                    <a href="category3.html" class="category-card" aria-label="تصفح منتجات اللانشون">
                         <img src="assets/لانشون.jpg" alt="لانشون">
                         <h3>لانشون</h3>
                     </a>
@@ -215,7 +215,7 @@
     <div class="cart-sidebar" id="cart-sidebar">
         <div class="cart-sidebar__header">
             <h2>سلة مشترياتك</h2>
-            <button class="cart-sidebar__close" id="cart-close">&times;</button>
+            <button class="cart-sidebar__close" id="cart-close" type="button" aria-label="إغلاق السلة">&times;</button>
         </div>
         <div class="cart-sidebar__body" id="cart-body">
             <!-- Cart items will be injected here by JavaScript -->
@@ -228,7 +228,7 @@
     <!-- End Cart Sidebar -->
 
     <script src="api-config.js" defer></script>
-    <script src="script.js?v=customer-responsive-1" defer></script>
+    <script src="script.js?v=store-mobile-v2" defer></script>
 
 </body>
 </html>

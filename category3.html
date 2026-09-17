@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>لانشون - تلاجتى</title>
-    <link rel="stylesheet" href="style.css?v=customer-responsive-1">
+    <link rel="stylesheet" href="style.css?v=store-mobile-v2">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -38,11 +38,11 @@
                 </ul>
             </div>
             <div class="nav__actions">
-                <button class="nav__cart-btn" id="cart-toggle">
+                <button class="nav__cart-btn" id="cart-toggle" type="button" aria-label="فتح سلة المشتريات">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.658-.463 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
                     <span class="nav__cart-count" id="cart-count">0</span>
                 </button>
-                <button class="nav__toggle" id="nav-toggle">
+                <button class="nav__toggle" id="nav-toggle" type="button" aria-label="فتح القائمة">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
                 </button>
             </div>
@@ -204,7 +204,7 @@
     <div class="cart-sidebar" id="cart-sidebar">
         <div class="cart-sidebar__header">
             <h2>سلة مشترياتك</h2>
-            <button class="cart-sidebar__close" id="cart-close">&times;</button>
+            <button class="cart-sidebar__close" id="cart-close" type="button" aria-label="إغلاق السلة">&times;</button>
         </div>
         <div class="cart-sidebar__body" id="cart-body"></div>
         <div class="cart-sidebar__footer"></div>
@@ -213,6 +213,6 @@
     <!-- End Cart Sidebar -->
 
     <script src="api-config.js" defer></script>
-    <script src="script.js?v=customer-responsive-1" defer></script>
+    <script src="script.js?v=store-mobile-v2" defer></script>
 </body>
 </html>

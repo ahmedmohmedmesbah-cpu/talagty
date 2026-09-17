@@ -1,4 +1,3 @@
-// FINAL SCRIPT - PDF Feature Removed for Simplicity
 document.addEventListener('DOMContentLoaded', () => {
 
     let PRODUCTS_DATA = [
@@ -18,17 +17,74 @@ document.addEventListener('DOMContentLoaded', () => {
     let PRODUCTS_MAP = Object.fromEntries(PRODUCTS_DATA.map(p => [p.id, p]));
     const ORDER_API_BASE_URL = (window.TALLAGTY_API_BASE_URL || '').replace(/\/$/, '');
     const currencyFmt = new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' });
+    const pageFile = location.pathname.split('/').pop() || 'index.html';
+    const isCategoryPage = /^category[123]\.html$/.test(pageFile);
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+
+    const mobileNav = document.createElement('nav');
+    mobileNav.className = 'mobile-bottom-nav';
+    mobileNav.setAttribute('aria-label', 'التنقل السريع');
+    mobileNav.innerHTML = `
+        <a href="index.html" ${!isCategoryPage ? 'aria-current="page"' : ''} aria-label="الرئيسية"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg><span>الرئيسية</span></a>
+        <a href="index.html#categories" ${isCategoryPage ? 'aria-current="page"' : ''} aria-label="فئات المنتجات"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>الفئات</span></a>
+        <a href="track.html" aria-label="متابعة طلباتي"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h10l3 3v15H4V3h3z"/><path d="M8 10h8M8 14h8M8 18h5"/></svg><span>طلباتي</span></a>
+        <button class="mobile-bottom-nav__cart" type="button" aria-label="فتح سلة المشتريات"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2l2 11h12l2-8H6M9 20h.01M17 20h.01"/></svg><span>السلة</span><span class="mobile-bottom-nav__count" id="mobile-cart-count">0</span></button>`;
+    document.body.appendChild(mobileNav);
+
+    const productGrid = document.querySelector('.product-grid');
+    if (productGrid && isCategoryPage) {
+        const quickNav = document.createElement('nav');
+        quickNav.className = 'category-quick-nav';
+        quickNav.setAttribute('aria-label', 'التبديل بين الفئات');
+        quickNav.innerHTML = [
+            ['category1.html', 'ألبان'],
+            ['category2.html', 'أجبان'],
+            ['category3.html', 'لانشون']
+        ].map(([href, label]) => `<a href="${href}" ${pageFile === href ? 'aria-current="page"' : ''}>${label}</a>`).join('');
+        productGrid.before(quickNav);
+    }
+
+    const heroSlides = [...document.querySelectorAll('.hero-slider__slide')];
+    const heroDots = document.querySelector('.hero-slider__dots');
+    if (heroSlides.length > 1 && heroDots) {
+        let activeSlide = 0;
+        heroDots.innerHTML = heroSlides.map((_, index) => `<button class="hero-slider__dot" type="button" aria-label="عرض الشريحة ${index + 1}" data-slide="${index}"></button>`).join('');
+        const showSlide = index => {
+            activeSlide = (index + heroSlides.length) % heroSlides.length;
+            heroSlides.forEach((slide, position) => {
+                const active = position === activeSlide;
+                slide.classList.toggle('active', active);
+                slide.inert = !active;
+                slide.setAttribute('aria-hidden', String(!active));
+            });
+            heroDots.querySelectorAll('button').forEach((dot, position) => {
+                dot.classList.toggle('active', position === activeSlide);
+                dot.setAttribute('aria-pressed', String(position === activeSlide));
+            });
+        };
+        document.querySelector('.hero-slider__btn--prev')?.addEventListener('click', () => showSlide(activeSlide - 1));
+        document.querySelector('.hero-slider__btn--next')?.addEventListener('click', () => showSlide(activeSlide + 1));
+        heroDots.addEventListener('click', event => {
+            const dot = event.target.closest('[data-slide]');
+            if (dot) showSlide(Number(dot.dataset.slide));
+        });
+        showSlide(0);
+    }
 
     const cartSidebar = document.getElementById('cart-sidebar');
     const cartOverlay = document.getElementById('cart-overlay');
-    const allCartToggles = document.querySelectorAll('.nav__cart-btn, #cart-toggle');
+    const allCartToggles = document.querySelectorAll('.nav__cart-btn, .mobile-bottom-nav__cart');
     const cartCloseBtn = document.getElementById('cart-close');
     const cartBody = document.getElementById('cart-body');
     const cartCountEl = document.getElementById('cart-count');
+    const mobileCartCountEl = document.getElementById('mobile-cart-count');
     const navMenu = document.getElementById('nav-menu');
     const navToggle = document.getElementById('nav-toggle');
 
-    let cart = JSON.parse(localStorage.getItem('tallagtyCart')) || [];
+    let cart;
+    try { cart = JSON.parse(localStorage.getItem('tallagtyCart')) || []; }
+    catch { cart = []; }
+    if (!Array.isArray(cart)) cart = [];
 
     const closeMobileMenu = () => {
         if (!navMenu || !navToggle) return;
@@ -61,16 +117,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!sidebar) return;
         sidebar.classList.add('active');
         if (cartOverlay) cartOverlay.classList.add('active');
+        document.body.classList.add('store-sheet-open');
     };
 
     const closeAllSidebars = () => {
         document.querySelectorAll('.cart-sidebar.active, .modal-overlay.active').forEach(el => el.classList.remove('active'));
         if (cartOverlay) cartOverlay.classList.remove('active');
+        document.body.classList.remove('store-sheet-open');
     };
 
     const updateCartInfo = () => {
         const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
         if (cartCountEl) cartCountEl.textContent = String(totalItems);
+        if (mobileCartCountEl) mobileCartCountEl.textContent = String(totalItems);
         const cartSubtotalEl = document.getElementById('cart-subtotal');
         if (cartSubtotalEl) {
             const subtotal = cart.reduce((sum, item) => sum + (PRODUCTS_MAP[item.id]?.price || 0) * item.quantity, 0);
@@ -95,21 +154,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!product) return;
                 const lineTotal = product.price * item.quantity;
                 const cartItemHTML = `
-                    <div class="cart-item" data-product-id="${item.id}">
-                        <img src="${product.imageUrl}" alt="${product.name}" class="cart-item__img">
+                    <div class="cart-item" data-product-id="${escapeHtml(item.id)}">
+                        <img src="${escapeHtml(product.imageUrl)}" alt="${escapeHtml(product.name)}" class="cart-item__img">
                         <div class="cart-item__details">
-                            <h3 class="cart-item__title">${product.name}</h3>
+                            <h3 class="cart-item__title">${escapeHtml(product.name)}</h3>
                             <p class="cart-item__price">${currencyFmt.format(product.price)}</p>
                             <div class="cart-item__actions">
                                 <div class="cart-item__quantity-controls">
-                                    <button class="quantity-decrease" aria-label="Decrease quantity">-</button>
+                                    <button class="quantity-decrease" type="button" aria-label="تقليل كمية ${escapeHtml(product.name)}">−</button>
                                     <span class="cart-item__quantity">${item.quantity}</span>
-                                    <button class="quantity-increase" aria-label="Increase quantity">+</button>
+                                    <button class="quantity-increase" type="button" aria-label="زيادة كمية ${escapeHtml(product.name)}">+</button>
                                 </div>
                                 <span class="cart-item__line-total">${currencyFmt.format(lineTotal)}</span>
                             </div>
                         </div>
-                        <button class="cart-item__remove" aria-label="Remove item">&times;</button>
+                        <button class="cart-item__remove" type="button" aria-label="حذف ${escapeHtml(product.name)} من السلة">&times;</button>
                     </div>
                 `;
                 cartBody.insertAdjacentHTML('beforeend', cartItemHTML);
@@ -137,19 +196,19 @@ document.addEventListener('DOMContentLoaded', () => {
             PRODUCTS_MAP = Object.fromEntries(PRODUCTS_DATA.map(product => [product.id, product]));
             cart = cart.filter(item => PRODUCTS_MAP[item.id]);
             saveCart();
-            const pageCategory = { 'category1.html': 'dairy', 'category2.html': 'cheese', 'category3.html': 'luncheon' }[location.pathname.split('/').pop()];
+            const pageCategory = { 'category1.html': 'dairy', 'category2.html': 'cheese', 'category3.html': 'luncheon' }[pageFile];
             const grid = document.querySelector('.product-grid');
             if (grid && pageCategory) {
                 const products = PRODUCTS_DATA.filter(product => product.categorySlug === pageCategory);
                 grid.innerHTML = products.length ? products.map(product => `
                     <article class="product-card">
-                        <img src="${product.imageUrl}" alt="${product.name}" class="product-card__image">
+                        <img src="${escapeHtml(product.imageUrl)}" alt="${escapeHtml(product.name)}" class="product-card__image" loading="lazy">
                         <div class="product-card__content">
-                            <h3 class="product-card__title">${product.name}</h3>
-                            <p class="product-card__desc">${product.description}</p>
+                            <h3 class="product-card__title">${escapeHtml(product.name)}</h3>
+                            <p class="product-card__desc">${escapeHtml(product.description)}</p>
                             <div class="product-card__footer">
                                 <span class="product-card__price">${product.originalPrice !== product.price ? `<small style="display:block;text-decoration:line-through;color:#6b7280">${currencyFmt.format(product.originalPrice)}</small>` : ''}${currencyFmt.format(product.price)}</span>
-                                <button class="btn btn-primary product-card__btn add-to-cart-btn" data-product-id="${product.id}" ${product.stock <= 0 ? 'disabled' : ''}>${product.stock <= 0 ? 'غير متوفر' : 'أضف إلى السلة'}</button>
+                                <button class="btn btn-primary product-card__btn add-to-cart-btn" type="button" data-product-id="${escapeHtml(product.id)}" ${product.stock <= 0 ? 'disabled' : ''}>${product.stock <= 0 ? 'غير متوفر' : 'أضف إلى السلة'}</button>
                             </div>
                         </div>
                     </article>`).join('') : '<p class="cart-sidebar__empty">لا توجد منتجات متاحة في هذه الفئة.</p>';
@@ -223,24 +282,25 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="cart-sidebar" id="checkout-sidebar">
                 <div class="cart-sidebar__header">
                     <h2>إتمام الطلب</h2>
-                    <button class="cart-sidebar__close" id="checkout-close">&times;</button>
+                    <button class="cart-sidebar__close" id="checkout-close" type="button" aria-label="إغلاق إتمام الطلب">&times;</button>
                 </div>
                 <div class="cart-sidebar__body">
                     <form id="order-form">
                         <div class="form-group">
                             <label for="customer-name">اسم العميل</label>
-                            <input type="text" id="customer-name" required placeholder="أدخل اسمك" />
+                            <input type="text" id="customer-name" autocomplete="name" required placeholder="الاسم الكامل" />
                         </div>
                         <div class="form-group">
                             <label for="customer-phone">رقم الهاتف</label>
-                            <input type="tel" id="customer-phone" required placeholder="أدخل رقم الهاتف" />
+                            <input type="tel" id="customer-phone" inputmode="tel" autocomplete="tel" required placeholder="01xxxxxxxxx" />
                         </div>
                         <div class="form-group">
                             <label for="customer-address-text">عنوان التوصيل</label>
-                            <textarea id="customer-address-text" rows="2" placeholder="اكتب عنوانك هنا"></textarea>
+                            <textarea id="customer-address-text" rows="3" autocomplete="street-address" required placeholder="الشارع، رقم المبنى، المنطقة، المدينة"></textarea>
                         </div>
+                        <p class="checkout-note">سيُراجع فريق تلاجتى طلبك ويتصل بك للتأكيد قبل تجهيزه.</p>
                         <div id="order-status" style="margin-top:1rem; font-weight: bold; display:none;"></div>
-                        <button type="submit" class="btn btn-primary" id="submit-order-btn" style="width:100%; margin-top:1rem;">تأكيد الطلب</button>
+                        <button type="submit" class="btn btn-primary" id="submit-order-btn" style="width:100%; margin-top:1rem;">إرسال الطلب للمراجعة</button>
                     </form>
                 </div>
                  <div class="cart-sidebar__footer">
@@ -284,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const result = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(result.detail || 'Failed to submit order');
+            if (!response.ok) throw new Error(result.detail || 'تعذر إرسال الطلب. حاول مرة أخرى.');
 
             cart = [];
             saveCart();
@@ -292,8 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
             closeAllSidebars();
             document.getElementById('order-form').reset();
 
-            // MODIFIED: Show a simple success toast instead of the PDF modal.
-            showToast(`تم تأكيد طلبك بنجاح. رقم الطلب: ${result.order_number}`, true);
+            showToast(`تم إرسال طلبك للمراجعة. رقم الطلب: ${result.order_number}`, true);
 
         } catch (error) {
             console.error('Order submission error:', error);
@@ -303,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('فشل إرسال الطلب. يرجى المحاولة مرة أخرى.', false);
         } finally {
             submitBtn.disabled = false;
-            submitBtn.textContent = 'تأكيد الطلب';
+            submitBtn.textContent = 'إرسال الطلب للمراجعة';
         }
     };
 
@@ -348,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
         footer.innerHTML = `
             <div class="cart-sidebar__subtotal">
                 <span>الإجمالي</span>
-                <span id="cart-subtotal">$0.00</span>
+            <span id="cart-subtotal">${currencyFmt.format(0)}</span>
             </div>
             <button class="btn btn-primary" id="go-to-checkout-btn" style="width:100%;">المتابعة لإتمام الطلب</button>
          `;
@@ -358,4 +417,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCart();
     createCheckoutSidebar();
     loadLiveCatalog();
+    if (new URLSearchParams(location.search).has('cart')) openSidebar(cartSidebar);
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') closeAllSidebars(); });
 });
