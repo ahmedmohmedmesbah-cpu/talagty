@@ -27,8 +27,17 @@
 .store-hero[data-mode="split"] picture { position: relative; height: 100%; min-height: 280px; grid-column: 2; grid-row: 1; }
 .store-hero[data-mode="split"] .store-hero__content { grid-column: 1; grid-row: 1; }
 .store-hero[data-mode="split"] .store-hero__slide::after { display: none; }
-.store-hero__controls { display: flex; align-items: center; gap: .75rem; padding: .6rem 1rem; justify-content: center; background: #123b45; }
-.store-hero__controls button { min-width: 44px; min-height: 44px; border: 1px solid #ffffff50; color: white; background: transparent; border-radius: 10px; cursor: pointer; font: inherit; padding: .4rem; }
+.store-hero[data-swipe="true"] { touch-action: pan-y pinch-zoom; cursor: grab; }
+.store-hero[data-swipe="true"] .store-hero__slide { user-select: none; -webkit-user-select: none; }
+.store-hero[data-swipe="true"] .store-hero__content { padding-bottom: 3rem; }
+.store-hero.is-dragging, .store-hero.is-dragging a { cursor: grabbing; }
+.store-hero__dots { position: absolute; z-index: 3; bottom: .15rem; inset-inline: 0; display: flex; justify-content: center; gap: 0; pointer-events: none; }
+.store-hero__dot { display: grid; place-items: center; width: 36px; height: 40px; border: 0; padding: 0; background: transparent; cursor: pointer; pointer-events: auto; }
+.store-hero__dot span { width: 8px; height: 8px; background: white; opacity: .65; border-radius: 999px; box-shadow: 0 1px 4px #0008; transition: width .2s, opacity .2s; }
+.store-hero__dot[aria-current="true"] span { width: 22px; opacity: 1; background: var(--primary-color); border: 1px solid white; }
+.store-hero__pause { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.store-hero__pause:focus-visible { width: auto; height: auto; clip-path: none; z-index: 4; top: .5rem; inset-inline-end: .5rem; padding: .5rem; background: white; color: #123b45; border: 0; border-radius: 8px; }
+@media (prefers-reduced-motion: reduce) { .store-hero__dot span { transition: none; } }
 .store-customized .category-card__placeholder { display: grid; place-items: center; height: 100px; font-size: 2rem; background: #e8faff; color: #086d83; }
 .store-customized[data-category-style="chips"] .category-card img, .store-customized[data-category-style="chips"] .category-card__placeholder { display: none; }
 .store-customized[data-category-style="chips"] .category-card { border: 1px solid var(--border-color); box-shadow: none; }

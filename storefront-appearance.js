@@ -30,8 +30,10 @@ function renderHero() {
     hero.innerHTML = slides.map((slide, index) => `<article class="store-hero__slide" ${index ? 'hidden' : ''}>
         ${slide.image_url || slide.mobile_image_url ? `<picture><source media="(max-width: 600px)" srcset="${escape(slide.mobile_image_url || slide.image_url)}"><img src="${escape(slide.image_url || slide.mobile_image_url)}" alt="" ${index ? 'loading="lazy"' : 'fetchpriority="high"'}></picture>` : ''}
         <div class="store-hero__content"><h1>${escape(slide.title)}</h1><p>${escape(slide.text)}</p>${slide.button_label ? `<a class="btn btn-primary" href="${escape(target(slide.button_target))}">${escape(slide.button_label)}</a>` : ''}</div>
-    </article>`).join('') + (slides.length > 1 ? `<div class="store-hero__controls"><button type="button" data-hero-action="prev" aria-label="البنر السابق">→</button><span aria-live="polite" class="store-hero__counter">1 / ${slides.length}</span><button type="button" data-hero-action="next" aria-label="البنر التالي">←</button>${settings.hero_autoplay ? '<button type="button" data-hero-action="pause" aria-label="إيقاف العرض التلقائي">إيقاف</button>' : ''}</div>` : '');
+    </article>`).join('') + (slides.length > 1 ? `<div class="store-hero__dots" role="group" aria-label="صور العروض">${slides.map((_, i) => `<button type="button" class="store-hero__dot" data-hero-action="dot" data-slide-index="${i}" aria-label="عرض الصورة ${i + 1} من ${slides.length}" ${i === 0 ? 'aria-current="true"' : ''}><span></span></button>`).join('')}</div>${settings.hero_autoplay ? '<button class="store-hero__pause" type="button" data-hero-action="pause" aria-label="إيقاف العرض التلقائي">إيقاف</button>' : ''}` : '');
+    hero.dataset.swipe = String(slides.length > 1);
     let active = 0, paused = matchMedia('(prefers-reduced-motion: reduce)').matches, explicitlyResumed = false;
+    let gesture = null, suppressClickUntil = 0, nextAutoAt = 0;
     const pauseButton = hero.querySelector('[data-hero-action="pause"]');
     const updatePauseButton = () => {
         if (!pauseButton) return;
@@ -43,18 +45,59 @@ function renderHero() {
     const show = index => {
         active = (index + slides.length) % slides.length;
         hero.querySelectorAll('.store-hero__slide').forEach((el, i) => { el.hidden = i !== active; });
-        const counter = hero.querySelector('.store-hero__counter');
-        if (counter) counter.textContent = `${active + 1} / ${slides.length}`;
+        hero.querySelectorAll('.store-hero__dot').forEach((dot, i) => {
+            if (i === active) dot.setAttribute('aria-current', 'true');
+            else dot.removeAttribute('aria-current');
+        });
+        nextAutoAt = Date.now() + settings.hero_interval * 1000;
     };
     hero.onclick = event => {
+        if (Date.now() < suppressClickUntil) { event.preventDefault(); event.stopPropagation(); return; }
         const button = event.target.closest('[data-hero-action]');
         if (!button) return;
         if (button.dataset.heroAction === 'pause') { paused = !paused; explicitlyResumed = !paused; updatePauseButton(); }
-        else show(active + (button.dataset.heroAction === 'next' ? 1 : -1));
+        else show(Number(button.dataset.slideIndex));
     };
+    const finishGesture = (event, cancelled = false) => {
+        if (!gesture || event.pointerId !== gesture.id) return;
+        const previous = gesture;
+        gesture = null;
+        previous.slide.style.removeProperty('transform');
+        hero.classList.remove('is-dragging');
+        if (hero.hasPointerCapture(event.pointerId)) hero.releasePointerCapture(event.pointerId);
+        if (!previous.horizontal) return;
+        suppressClickUntil = Date.now() + 400;
+        if (!cancelled) {
+            const dx = event.clientX - previous.x;
+            const threshold = Math.min(80, Math.max(35, hero.clientWidth * .1));
+            if (Math.abs(dx) >= threshold) show(active + (dx > 0 ? 1 : -1));
+        }
+    };
+    hero.onpointerdown = event => {
+        if (slides.length < 2 || !event.isPrimary || event.button !== 0 || event.target.closest('button')) return;
+        gesture = { id: event.pointerId, x: event.clientX, y: event.clientY, horizontal: false, slide: hero.querySelector('.store-hero__slide:not([hidden])') };
+    };
+    hero.onpointermove = event => {
+        if (!gesture || gesture.id !== event.pointerId) return;
+        const dx = event.clientX - gesture.x, dy = event.clientY - gesture.y;
+        if (!gesture.horizontal) {
+            if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { finishGesture(event, true); return; }
+            if (Math.abs(dx) < 10 || Math.abs(dx) <= Math.abs(dy)) return;
+            gesture.horizontal = true;
+            hero.setPointerCapture(event.pointerId);
+            hero.classList.add('is-dragging');
+        }
+        event.preventDefault();
+        gesture.slide.style.transform = `translateX(${Math.max(-hero.clientWidth / 3, Math.min(hero.clientWidth / 3, dx))}px)`;
+    };
+    hero.onpointerup = event => finishGesture(event);
+    hero.onpointercancel = event => finishGesture(event, true);
+    hero.onlostpointercapture = event => finishGesture(event, true);
+    hero.onpointerleave = event => { if (gesture && !gesture.horizontal) finishGesture(event, true); };
+    hero.ondragstart = event => { if (slides.length > 1) event.preventDefault(); };
     if (settings.hero_autoplay && slides.length > 1) {
         timer = setInterval(() => {
-            if (shouldAdvanceBanner({ paused, pageHidden: document.hidden,
+            if (!gesture && Date.now() >= nextAutoAt && shouldAdvanceBanner({ paused, pageHidden: document.hidden,
                 hoverCapable: matchMedia('(hover: hover) and (pointer: fine)').matches,
                 hovered: hero.matches(':hover'), keyboardFocused: Boolean(hero.querySelector(':focus-visible')),
                 explicitlyResumed })) show(active + 1);
