@@ -1,4 +1,5 @@
 import { defaultAppearance, validateAppearance, imageUrl } from './supabase/functions/talagty-api/appearance-config.mjs';
+import { effectiveHeroMode } from './storefront-banner.mjs';
 
 const panel = document.getElementById('view-appearance');
 const base = (window.TALLAGTY_API_BASE_URL || '').replace(/\/$/, '');
@@ -69,7 +70,7 @@ async function load() {
     busy = true; update(); status('جاري تحميل المظهر المحفوظ…');
     try {
         const result = previewMode ? { settings: defaultAppearance, revision: 0 } : await request('/api/admin/storefront/appearance');
-        draft = validateAppearance(result.settings); saved = structuredClone(draft); revision = result.revision; loaded = true;
+        draft = validateAppearance(result.settings); saved = structuredClone(draft); draft.hero_mode = effectiveHeroMode(draft); revision = result.revision; loaded = true;
         try { const res = await fetch(`${base}/api/catalog`); if (res.ok) categories = (await res.json()).categories || []; } catch {}
         renderForm();
         $('appearance-updated').textContent = result.updated_at ? `آخر حفظ: ${new Date(result.updated_at).toLocaleString('ar-EG')}` : '';
@@ -81,6 +82,14 @@ async function load() {
 $('appearance-form').addEventListener('input', event => {
     const el = event.target;
     if (el.dataset.field) { const numeric = ['font_size', 'corner_radius', 'category_columns', 'product_columns', 'hero_overlay', 'hero_interval']; draft[el.dataset.field] = el.type === 'checkbox' ? el.checked : numeric.includes(el.dataset.field) ? Number(el.value) : el.value; }
+    if (el.dataset.field === 'hero_autoplay' && el.checked) {
+        draft.hero_mode = 'slider';
+        panel.querySelector('[data-field="hero_mode"]').value = 'slider';
+    }
+    if (el.dataset.field === 'hero_mode' && el.value !== 'slider') {
+        draft.hero_autoplay = false;
+        panel.querySelector('[data-field="hero_autoplay"]').checked = false;
+    }
     if (el.dataset.slide !== undefined) draft.slides[Number(el.dataset.slide)][el.dataset.key] = el.value;
     if (el.dataset.imageKey) { const dest = el.dataset.imageIndex === '' ? draft : draft.slides[Number(el.dataset.imageIndex)]; dest[el.dataset.imageKey] = el.value; }
     update();

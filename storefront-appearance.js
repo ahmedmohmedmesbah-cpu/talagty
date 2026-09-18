@@ -1,4 +1,5 @@
 import { defaultAppearance, validateAppearance } from './supabase/functions/talagty-api/appearance-config.mjs';
+import { effectiveHeroMode, shouldAdvanceBanner } from './storefront-banner.mjs';
 
 const preview = new URLSearchParams(location.search).has('appearance-preview') && window.parent !== window;
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -18,18 +19,27 @@ function renderHero() {
     const hero = document.querySelector('.hero-slider, .store-hero');
     if (!hero) return;
     clearInterval(timer);
+    const mode = effectiveHeroMode(settings);
     hero.className = 'store-hero';
-    hero.hidden = settings.hero_mode === 'hidden';
-    hero.dataset.mode = settings.hero_mode;
+    hero.hidden = mode === 'hidden';
+    hero.dataset.mode = mode;
     hero.dataset.height = settings.hero_height;
     hero.style.setProperty('--hero-overlay', settings.hero_overlay / 100);
     hero.style.setProperty('--hero-position', settings.hero_position);
-    const slides = settings.hero_mode === 'slider' ? settings.slides : settings.slides.slice(0, 1);
+    const slides = mode === 'slider' ? settings.slides : settings.slides.slice(0, 1);
     hero.innerHTML = slides.map((slide, index) => `<article class="store-hero__slide" ${index ? 'hidden' : ''}>
         ${slide.image_url || slide.mobile_image_url ? `<picture><source media="(max-width: 600px)" srcset="${escape(slide.mobile_image_url || slide.image_url)}"><img src="${escape(slide.image_url || slide.mobile_image_url)}" alt="" ${index ? 'loading="lazy"' : 'fetchpriority="high"'}></picture>` : ''}
         <div class="store-hero__content"><h1>${escape(slide.title)}</h1><p>${escape(slide.text)}</p>${slide.button_label ? `<a class="btn btn-primary" href="${escape(target(slide.button_target))}">${escape(slide.button_label)}</a>` : ''}</div>
     </article>`).join('') + (slides.length > 1 ? `<div class="store-hero__controls"><button type="button" data-hero-action="prev" aria-label="البنر السابق">→</button><span aria-live="polite" class="store-hero__counter">1 / ${slides.length}</span><button type="button" data-hero-action="next" aria-label="البنر التالي">←</button>${settings.hero_autoplay ? '<button type="button" data-hero-action="pause" aria-label="إيقاف العرض التلقائي">إيقاف</button>' : ''}</div>` : '');
-    let active = 0, paused = false;
+    let active = 0, paused = matchMedia('(prefers-reduced-motion: reduce)').matches, explicitlyResumed = false;
+    const pauseButton = hero.querySelector('[data-hero-action="pause"]');
+    const updatePauseButton = () => {
+        if (!pauseButton) return;
+        pauseButton.textContent = paused ? 'تشغيل' : 'إيقاف';
+        pauseButton.setAttribute('aria-label', paused ? 'تشغيل العرض التلقائي' : 'إيقاف العرض التلقائي');
+    };
+    updatePauseButton();
+    hero.onfocusout = () => { explicitlyResumed = false; };
     const show = index => {
         active = (index + slides.length) % slides.length;
         hero.querySelectorAll('.store-hero__slide').forEach((el, i) => { el.hidden = i !== active; });
@@ -39,11 +49,16 @@ function renderHero() {
     hero.onclick = event => {
         const button = event.target.closest('[data-hero-action]');
         if (!button) return;
-        if (button.dataset.heroAction === 'pause') { paused = !paused; button.textContent = paused ? 'تشغيل' : 'إيقاف'; button.setAttribute('aria-label', paused ? 'تشغيل العرض التلقائي' : 'إيقاف العرض التلقائي'); }
+        if (button.dataset.heroAction === 'pause') { paused = !paused; explicitlyResumed = !paused; updatePauseButton(); }
         else show(active + (button.dataset.heroAction === 'next' ? 1 : -1));
     };
-    if (settings.hero_autoplay && slides.length > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        timer = setInterval(() => { if (!paused && !document.hidden && !hero.matches(':hover') && !hero.contains(document.activeElement)) show(active + 1); }, settings.hero_interval * 1000);
+    if (settings.hero_autoplay && slides.length > 1) {
+        timer = setInterval(() => {
+            if (shouldAdvanceBanner({ paused, pageHidden: document.hidden,
+                hoverCapable: matchMedia('(hover: hover) and (pointer: fine)').matches,
+                hovered: hero.matches(':hover'), keyboardFocused: Boolean(hero.querySelector(':focus-visible')),
+                explicitlyResumed })) show(active + 1);
+        }, settings.hero_interval * 1000);
     }
 }
 
