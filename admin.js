@@ -8,7 +8,7 @@
     const previewMode = ['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).has('preview');
     const money = new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP', maximumFractionDigits: 2 });
     const statusLabels = { pending_assignment: 'بانتظار المراجعة', deferred_review: 'مؤجل للمراجعة', approved: 'تمت الموافقة', assigned: 'تم الإسناد', preparing: 'قيد التجهيز', out_for_delivery: 'خرج للتوصيل', completed: 'مكتمل', cancelled: 'ملغي' };
-    const viewTitles = { orders: 'الطلبات الجديدة', products: 'المنتجات والعروض', categories: 'فئات المنتجات', suppliers: 'إدارة الموردين', inventory: 'المخزون المركزي', reports: 'التقارير' };
+    const viewTitles = { orders: 'الطلبات الجديدة', products: 'المنتجات والعروض', categories: 'فئات المنتجات', appearance: 'مظهر المتجر', suppliers: 'إدارة الموردين', inventory: 'المخزون المركزي', reports: 'التقارير' };
     const fallbackImage = 'assets/لانشون.jpg';
 
     const demo = {
@@ -57,6 +57,7 @@
         } catch (error) { toast(error.message, true); }
     }
     async function refreshView() {
+        if (currentView === 'appearance') { window.dispatchEvent(new Event('appearance:reload')); return; }
         if (previewMode) { renderAll(); return; }
         const paths = { orders: '/api/admin/orders', products: '/api/admin/products', categories: '/api/admin/categories', suppliers: '/api/admin/suppliers', inventory: '/api/admin/products', reports: '/api/admin/orders' };
         const key = currentView === 'inventory' ? 'products' : currentView === 'reports' ? 'orders' : currentView;

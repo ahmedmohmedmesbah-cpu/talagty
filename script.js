@@ -199,7 +199,18 @@ document.addEventListener('DOMContentLoaded', () => {
             PRODUCTS_MAP = Object.fromEntries(PRODUCTS_DATA.map(product => [product.id, product]));
             cart = cart.filter(item => PRODUCTS_MAP[item.id]);
             saveCart();
-            const pageCategory = { 'category1.html': 'dairy', 'category2.html': 'cheese', 'category3.html': 'luncheon' }[pageFile];
+            window.talagtyCatalog = catalog;
+            window.dispatchEvent(new CustomEvent('talagty:catalog', { detail: catalog }));
+            const pageCategory = new URLSearchParams(location.search).get('category') || { 'category1.html': 'dairy', 'category2.html': 'cheese', 'category3.html': 'luncheon' }[pageFile];
+            if (isCategoryPage) {
+                const category = (catalog.categories || []).find(item => item.slug === pageCategory);
+                const title = document.querySelector('main .section__title');
+                const subtitle = document.querySelector('main .section__subtitle');
+                const crumb = document.querySelector('.breadcrumb span');
+                if (title) title.textContent = category?.name_ar || 'الفئة غير متاحة';
+                if (subtitle) subtitle.textContent = category?.description_ar || '';
+                if (crumb) crumb.textContent = category?.name_ar || 'الفئة غير متاحة';
+            }
             const grid = productGrid;
             if (grid && pageCategory) {
                 const products = PRODUCTS_DATA.filter(product => product.categorySlug === pageCategory);
@@ -427,5 +438,5 @@ document.addEventListener('DOMContentLoaded', () => {
     loadLiveCatalog();
     if (new URLSearchParams(location.search).has('cart')) openSidebar(cartSidebar);
     document.addEventListener('keydown', event => { if (event.key === 'Escape') closeAllSidebars(); });
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./track-sw.js?v=4').catch(() => {});
+    if ('serviceWorker' in navigator && !new URLSearchParams(location.search).has('appearance-preview')) navigator.serviceWorker.register('./track-sw.js?v=5').catch(() => {});
 });

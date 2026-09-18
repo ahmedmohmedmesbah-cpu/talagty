@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.95.0'
 import bcrypt from 'npm:bcryptjs@2.4.3'
+import { appearanceApi } from './appearance-api.mjs'
 
 const projectUrl = Deno.env.get('SUPABASE_URL')!
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -341,6 +342,12 @@ Deno.serve(async (request) => {
   try {
     if (request.method === 'GET' && route === '/health') return response(request, { status: 'ok', version: '2.1-manual-whatsapp' })
     if (request.method === 'GET' && route === '/api/catalog') return response(request, { categories: await listCategories(), products: await listProducts() })
+    if (route === '/api/storefront/appearance') {
+      const result = await appearanceApi(request, route, admin)
+      const reply = response(request, result.body, result.status)
+      reply.headers.set('Cache-Control', 'no-store')
+      return reply
+    }
 
     if (request.method === 'POST' && route === '/api/customer/auth/request-code') {
       const body = await parseBody(request)
@@ -463,6 +470,13 @@ Deno.serve(async (request) => {
     if (route.startsWith('/api/admin/')) {
       const claims = await requireRole(request, 'admin')
       if (!claims) return apiError(request, 'يلزم تسجيل الدخول كمدير', 401)
+
+      if (route === '/api/admin/storefront/appearance' || route === '/api/admin/storefront-images') {
+        const result = await appearanceApi(request, route, admin, claims.sub)
+        const reply = response(request, result.body, result.status)
+        reply.headers.set('Cache-Control', 'no-store')
+        return reply
+      }
 
       if (request.method === 'GET' && route === '/api/admin/orders') return response(request, await getOrders())
       const customerActivationMatch = route.match(/^\/api\/admin\/orders\/([^/]+)\/customer-activation$/)

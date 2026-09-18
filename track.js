@@ -119,6 +119,6 @@
     window.addEventListener('offline', () => { $('connection-state').textContent = 'دون اتصال'; setMessage('orders-message', 'أنت دون اتصال. رموز الاستلام والطلبات المحفوظة ما زالت متاحة.'); });
 
     $('track-phone').value = phone; $('connection-state').textContent = navigator.onLine ? 'متصل' : 'دون اتصال';
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./track-sw.js?v=4').catch(() => {});
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./track-sw.js?v=5').catch(() => {});
     if (token) loadOrders(); else showView('phone-view');
 })();
