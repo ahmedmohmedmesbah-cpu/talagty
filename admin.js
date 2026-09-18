@@ -7,7 +7,7 @@
     const state = { orders: [], products: [], categories: [], suppliers: [], movements: [] };
     const previewMode = ['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).has('preview');
     const money = new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP', maximumFractionDigits: 2 });
-    const statusLabels = { pending_assignment: 'بانتظار المراجعة', deferred_review: 'مؤجل للمراجعة', approved: 'تمت الموافقة', assigned: 'تم الإسناد', preparing: 'قيد التجهيز', out_for_delivery: 'خرج للتوصيل', completed: 'مكتمل', cancelled: 'ملغي' };
+    const statusLabels = { pending_assignment: 'بانتظار المراجعة', deferred_review: 'مؤجل للمراجعة', approved: 'تمت الموافقة', assigned: 'تم الإسناد', preparing: 'قيد التجهيز', out_for_delivery: 'خرج للتوصيل', pending_delivery_review: 'بانتظار تأكيد التسليم', delivery_proof_rejected: 'مطلوب إعادة تصوير الفاتورة', completed: 'مكتمل', cancelled: 'ملغي' };
     const viewTitles = { orders: 'الطلبات الجديدة', products: 'المنتجات والعروض', categories: 'فئات المنتجات', appearance: 'مظهر المتجر', suppliers: 'إدارة الموردين', inventory: 'المخزون المركزي', reports: 'التقارير' };
     const fallbackImage = 'assets/لانشون.jpg';
 
@@ -124,12 +124,34 @@
     function renderReports() { const completed = state.orders.filter(order => order.status === 'completed'), sales = completed.reduce((sum, order) => sum + Number(order.total || 0), 0); $('report-completed').textContent = completed.length; $('report-sales').textContent = money.format(sales); $('report-average').textContent = money.format(completed.length ? sales / completed.length : 0); $('completed-orders').innerHTML = completed.length ? completed.map(orderCard).join('') : '<div class="empty-state">لا توجد طلبات مكتملة.</div>'; }
     function fillSelects() { const categoryOptions = '<option value="">بدون فئة</option>' + state.categories.map(category => `<option value="${category.id}">${escapeHtml(category.name_ar)}</option>`).join(''); $('product-category').innerHTML = categoryOptions; const productOptions = state.products.map(product => `<option value="${product.id}">${escapeHtml(product.name_ar)} (${product.stock_quantity || 0})</option>`).join(''); $('stock-product').innerHTML = productOptions; $('sale-product').innerHTML = state.products.length ? state.products.map(product => `<option value="${product.id}">${escapeHtml(product.name_ar)} — ${money.format(Number(product.unit_price || 0))}</option>`).join('') : '<option value="">أضف منتجاً أولاً</option>'; }
 
+    async function loadDeliveryReview(orderId) {
+        const target = $('delivery-review');
+        if (!target) return;
+        try {
+            const proofs = previewMode ? [] : await api('/api/admin/orders/' + encodeURIComponent(orderId) + '/delivery-proof');
+            if (!target.isConnected) return;
+            target.innerHTML = '<h3>إثبات التسليم</h3>' + (proofs.length ? proofs.map(proof => `<article><p>${escapeHtml({pending:'بانتظار اعتمادك',approved:'تم الاعتماد',rejected:'طُلب إعادة التصوير'}[proof.status])} — ${escapeHtml(proof.submitted_at)} — المندوب #${escapeHtml(proof.submitted_by)}</p><a href="${escapeHtml(proof.image_url)}" target="_blank" rel="noopener"><img src="${escapeHtml(proof.image_url)}" alt="الفاتورة الموقعة" style="width:100%;max-height:360px;object-fit:contain"></a>${proof.reviewed_at ? `<p>المراجعة: ${escapeHtml(proof.reviewed_at)} — المدير #${escapeHtml(proof.reviewed_by)}</p>` : ''}${proof.review_note ? `<p>${escapeHtml(proof.review_note)}</p>` : ''}${proof.status === 'pending' ? `<label>سبب طلب إعادة التصوير<textarea id="delivery-review-note" maxlength="1000" rows="2"></textarea></label><div class="workflow-actions"><button class="btn btn-success" data-delivery-review="approve" data-order="${escapeHtml(orderId)}" data-proof="${escapeHtml(proof.id)}">اعتماد التسليم وإكمال الطلب</button><button class="btn btn-warning" data-delivery-review="reject" data-order="${escapeHtml(orderId)}" data-proof="${escapeHtml(proof.id)}">طلب إعادة تصوير الفاتورة</button></div>` : ''}</article>`).join('') : '<p>لم يرفع المندوب إثباتاً بعد.</p>');
+        } catch (error) { if (target.isConnected) target.textContent = error.message; }
+    }
+    async function reviewDelivery(button) {
+        const approve = button.dataset.deliveryReview === 'approve';
+        const note = $('delivery-review-note')?.value.trim() || '';
+        if (!approve && !note) { toast('اكتب سبب طلب إعادة التصوير', true); return; }
+        if (approve && !confirm('هل راجعت توقيع العميل وتريد اعتماد التسليم وخصم المخزون؟')) return;
+        const buttons = [...$('delivery-review').querySelectorAll('button')]; buttons.forEach(item => item.disabled = true);
+        try {
+            await api('/api/admin/orders/' + encodeURIComponent(button.dataset.order) + '/delivery-proof', {method:'PATCH',body:{proof_id:button.dataset.proof,approve,note}});
+            await loadAll(); showOrder(button.dataset.order); toast(approve ? 'تم اعتماد التسليم' : 'تم طلب إعادة التصوير');
+        } catch (error) { toast(error.message,true); } finally { buttons.forEach(item => item.disabled = false); }
+    }
     function showOrder(orderId) {
         const order = state.orders.find(candidate => String(candidate.order_id) === String(orderId)); if (!order) return;
-        const canReview = ['pending_assignment', 'deferred_review'].includes(order.status), canAssign = order.status === 'approved', canActivateCustomer = ['approved', 'assigned', 'preparing', 'out_for_delivery'].includes(order.status) && !order.customer_device_bound;
+        const canReview = ['pending_assignment', 'deferred_review'].includes(order.status), canAssign = order.status === 'approved', canActivateCustomer = ['approved', 'assigned', 'preparing', 'out_for_delivery','pending_delivery_review','delivery_proof_rejected','completed'].includes(order.status) && !order.customer_device_bound;
         const suppliers = state.suppliers.filter(supplier => supplier.is_available && supplier.is_activated);
         $('order-modal-content').innerHTML = `<div class="order-detail-head"><div><span class="eyebrow">${escapeHtml(order.order_number)}</span><h2>مراجعة الطلب</h2></div>${statusPill(order.status)}</div><div class="order-detail-grid"><section class="detail-box"><h3>بيانات العميل</h3><label>الاسم<input id="review-name" value="${escapeHtml(order.customer_name || '')}" ${canReview ? '' : 'disabled'}></label><label>الهاتف<input id="review-phone" value="${escapeHtml(order.customer_phone || '')}" ${canReview ? '' : 'disabled'}></label><label>العنوان<textarea id="review-address" rows="2" ${canReview ? '' : 'disabled'}>${escapeHtml(order.customer_address_text || '')}</textarea></label></section><section class="detail-box"><h3>التشغيل</h3><p><strong>المورد:</strong> ${escapeHtml(order.assigned_supplier_name || 'لم يتم الإسناد')}</p><p><strong>متابعة العميل:</strong> ${order.customer_device_bound ? 'مفعّلة على جهاز العميل' : 'لم يتم تفعيلها بعد'}</p><label>ملاحظات الإدارة<textarea id="review-note" rows="3" ${canReview ? '' : 'disabled'}>${escapeHtml(order.admin_note || '')}</textarea></label>${canAssign ? `<label>إسناد الطلب<select id="assign-supplier"><option value="">اختر المورد</option>${suppliers.map(supplier => `<option value="${supplier.supplier_id}">${escapeHtml(supplier.full_name)}</option>`).join('')}</select></label><label>طريقة الإسناد<select id="assignment-mode"><option value="whole">الطلب كاملاً لمورد واحد</option><option value="split">تقسيم الطلب بين موردين (إعداد متقدم)</option></select></label>` : ''}</section></div><section class="detail-box"><h3>تفاصيل الفاتورة</h3><table class="invoice-items"><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${(order.items || []).map((item, index) => `<tr><td>${escapeHtml(item.name)}</td><td>${canReview ? `<input class="review-quantity" data-index="${index}" type="number" min="1" value="${item.quantity}">` : item.quantity}</td><td>${canReview ? `<input class="review-price" data-index="${index}" type="number" min="0" step=".01" value="${item.unit_price}">` : money.format(item.unit_price)}</td><td>${money.format(item.line_total)}</td></tr>`).join('')}</tbody></table><p style="text-align:left;font-weight:800">الإجمالي: ${money.format(order.total)}</p></section><div class="customer-activation-result" id="customer-activation-result" hidden></div><div class="workflow-actions">${canReview ? `<button class="btn btn-success" data-review-action="approved" data-id="${order.order_id}">تأكيد الطلب</button><button class="btn btn-warning" data-review-action="deferred_review" data-id="${order.order_id}">مؤجل للمراجعة</button><button class="btn btn-secondary" data-review-action="cancelled" data-id="${order.order_id}">رفض الطلب</button>` : ''}${canAssign ? `<button class="btn btn-primary" data-assign-order="${order.order_id}">إسناد للمورد</button>` : ''}${canActivateCustomer ? `<button class="btn btn-whatsapp" data-customer-activation="${order.order_id}">إرسال كود التفعيل عبر واتساب</button>` : ''}<button class="btn btn-secondary" onclick="window.print()">طباعة الفاتورة</button></div>`;
         openModal('order-modal');
+        $('order-modal-content').insertAdjacentHTML('beforeend', '<section class="detail-box" id="delivery-review" aria-live="polite">جاري تحميل إثبات التسليم…</section>');
+        loadDeliveryReview(orderId);
         if (canAssign) {
             const modeSelect = $('assignment-mode');
             const primarySupplier = $('assign-supplier').closest('label');
@@ -292,6 +314,7 @@
         if (event.target.closest('[data-close-modal]') || (event.target.classList.contains('modal-shell'))) closeModals();
         const orderButton = event.target.closest('[data-order-id]'); if (orderButton) showOrder(orderButton.dataset.orderId);
         const review = event.target.closest('[data-review-action]'); if (review) reviewOrder(review.dataset.id, review.dataset.reviewAction);
+        const deliveryReview = event.target.closest('[data-delivery-review]'); if (deliveryReview) reviewDelivery(deliveryReview);
         const assign = event.target.closest('[data-assign-order]'); if (assign) assignOrderAdvanced(assign.dataset.assignOrder);
         const customerActivation = event.target.closest('[data-customer-activation]'); if (customerActivation) sendCustomerActivation(customerActivation.dataset.customerActivation, customerActivation);
         const product = event.target.closest('[data-edit-product]'); if (product) editProduct(product.dataset.editProduct);
@@ -306,5 +329,8 @@
     $('category-manage-toggle').addEventListener('click', () => { categoryManageMode = !categoryManageMode; renderCategories(); });
     $('order-search').addEventListener('input', renderOrders); $('order-filter').addEventListener('change', renderOrders); $('refresh-current').addEventListener('click', refreshView); $('print-report').addEventListener('click', () => window.print()); $('mobile-menu').addEventListener('click', () => $('admin-sidebar').classList.toggle('open')); $('logout-btn').addEventListener('click', () => { token = ''; sessionStorage.removeItem('tallagtyAdminToken'); showLogin(); });
     $('today-label').textContent = new Intl.DateTimeFormat('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+    for (const status of ['pending_delivery_review','delivery_proof_rejected']) {
+        const option = document.createElement('option'); option.value = status; option.textContent = statusLabels[status]; $('order-filter').append(option);
+    }
     bootstrap();
 })();

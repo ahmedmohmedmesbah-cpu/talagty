@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.95.0'
 import bcrypt from 'npm:bcryptjs@2.4.3'
 import { appearanceApi } from './appearance-api.mjs'
+import { deliveryApi } from './delivery-api.mjs'
 
 const projectUrl = Deno.env.get('SUPABASE_URL')!
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -29,7 +30,7 @@ function corsHeaders(request: Request) {
 }
 
 function response(request: Request, body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: corsHeaders(request) })
+  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders(request), ...(request.headers.has('authorization') ? { 'Cache-Control': 'no-store' } : {}) } })
 }
 
 function apiError(request: Request, message: string, status = 400, extras: Record<string, unknown> = {}) {
@@ -244,7 +245,7 @@ function mapOrder(order: any) {
     created_at: order.created_at, updated_at: order.updated_at, approved_at: order.approved_at, completed_at: order.completed_at,
     assigned_supplier_name: assignments[0]?.supplier_name ?? supplierUser?.full_name ?? null, assignments,
     items: (order.order_items ?? []).map((item: any) => ({ item_id: item.id, product_id: item.product_sku, name: item.product_name_ar, quantity: item.quantity, unit_price: Number(item.unit_price), line_total: Number(item.line_total) })),
-    timeline: (order.order_status_history ?? []).map((entry: any) => ({ status: entry.new_status, previous_status: entry.previous_status, note: entry.note, created_at: entry.created_at })),
+    timeline: (order.order_status_history ?? []).map((entry: any) => ({ status: entry.new_status, previous_status: entry.previous_status, note: entry.note, created_at: entry.created_at })).sort((a: any, b: any) => a.created_at.localeCompare(b.created_at)),
   }
 }
 
@@ -275,25 +276,12 @@ async function getOrders(phone?: string, supplierUserId?: number, customerId?: n
 
 async function getCustomerOrders(customerId: number) {
   const orders = await getOrders(undefined, undefined, customerId)
-  const databaseIds = orders.map((order: any) => order.database_id)
-  if (!databaseIds.length) return []
-  const { data: tokens, error } = await admin.from('delivery_confirmation_tokens')
-    .select('order_id,token_value,expires_at,used_at,created_at')
-    .in('order_id', databaseIds)
-    .is('used_at', null)
-    .not('token_value', 'is', null)
-    .order('created_at', { ascending: false })
-  if (error) throw error
-  const tokenByOrder = new Map<number, any>()
-  for (const token of tokens ?? []) if (!tokenByOrder.has(token.order_id)) tokenByOrder.set(token.order_id, token)
   return orders.map((order: any) => {
-    const token = tokenByOrder.get(order.database_id)
-    const qrVisible = ['assigned', 'preparing', 'out_for_delivery'].includes(order.status)
-    const { database_id: _databaseId, ...safeOrder } = order
+    const { database_id: _databaseId, admin_note: _note, assignments: _assignments, ...safeOrder } = order
     return {
       ...safeOrder,
-      delivery_qr_payload: qrVisible && token?.token_value ? `talagty:${order.order_id}:${token.token_value}` : null,
-      delivery_qr_created_at: qrVisible && token?.token_value ? token.created_at : null,
+      invoice_available: order.status === 'completed',
+      timeline: order.timeline.map(({ status, previous_status, created_at }: any) => ({ status, previous_status, created_at })),
     }
   })
 }
@@ -340,7 +328,7 @@ Deno.serve(async (request) => {
   const url = new URL(request.url)
   const route = url.pathname.replace(/^\/(?:functions\/v1\/)?talagty-api(?=\/|$)/, '') || '/'
   try {
-    if (request.method === 'GET' && route === '/health') return response(request, { status: 'ok', version: '2.1-manual-whatsapp' })
+    if (request.method === 'GET' && route === '/health') return response(request, { status: 'ok', version: '2.2-signed-delivery-review' })
     if (request.method === 'GET' && route === '/api/catalog') return response(request, { categories: await listCategories(), products: await listProducts() })
     if (route === '/api/storefront/appearance') {
       const result = await appearanceApi(request, route, admin)
@@ -471,6 +459,16 @@ Deno.serve(async (request) => {
       const claims = await requireRole(request, 'admin')
       if (!claims) return apiError(request, 'يلزم تسجيل الدخول كمدير', 401)
 
+      const proofMatch = route.match(/^\/api\/admin\/orders\/([^/]+)\/delivery-proof$/)
+      if (proofMatch) {
+        const result = await deliveryApi(request, proofMatch[1], admin, claims, adminReportEmail)
+        if (request.method === 'PATCH' && result.status === 200 && result.body.status === 'completed' && !result.body.already_reviewed) {
+          // Completion is committed even if the email provider is unavailable.
+          try { await sendCompletionReport(proofMatch[1]) } catch (error) { console.error('Delivery report pending', error) }
+        }
+        return response(request, result.body, result.status)
+      }
+
       if (route === '/api/admin/storefront/appearance' || route === '/api/admin/storefront-images') {
         const result = await appearanceApi(request, route, admin, claims.sub)
         const reply = response(request, result.body, result.status)
@@ -487,7 +485,7 @@ Deno.serve(async (request) => {
           .maybeSingle()
         if (orderError) throw orderError
         if (!order) return apiError(request, 'الطلب غير موجود', 404)
-        if (!['approved', 'assigned', 'preparing', 'out_for_delivery'].includes(order.status)) {
+        if (!['approved', 'assigned', 'preparing', 'out_for_delivery', 'pending_delivery_review', 'delivery_proof_rejected', 'completed'].includes(order.status)) {
           return apiError(request, 'يجب تأكيد الطلب أولاً قبل إرسال كود التفعيل', 422)
         }
         const customer = relationOne(order.customers)
@@ -651,6 +649,11 @@ Deno.serve(async (request) => {
     if (route.startsWith('/api/supplier/')) {
       const supplier = await requireSupplier(request)
       if (!supplier) return apiError(request, 'جلسة المورد غير صالحة لهذا الهاتف', 401)
+      const proofMatch = route.match(/^\/api\/supplier\/orders\/([^/]+)\/delivery-proof$/)
+      if (proofMatch) {
+        const result = await deliveryApi(request, proofMatch[1], admin, supplier, adminReportEmail)
+        return response(request, result.body, result.status)
+      }
       if (request.method === 'GET' && route === '/api/supplier/orders') return response(request, await getOrders(undefined, supplier.sub))
       if (request.method === 'GET' && route === '/api/supplier/notifications') {
         const { data: profile } = await admin.from('suppliers').select('id').eq('user_id', supplier.sub).single()
@@ -667,18 +670,7 @@ Deno.serve(async (request) => {
       }
       const deliveryMatch = route.match(/^\/api\/supplier\/orders\/([^/]+)\/delivery\/confirm$/)
       if (request.method === 'POST' && deliveryMatch) {
-        const body = await parseBody(request)
-        const rawToken = String(body.token ?? '')
-        if (rawToken.length < 6) return apiError(request, 'رمز الاستلام غير صحيح', 422)
-        const { data, error } = await admin.rpc('confirm_order_delivery', {
-          p_order_public_id: deliveryMatch[1],
-          p_token_hash: await sha256(rawToken),
-          p_supplier_user_id: supplier.sub,
-          p_report_email: adminReportEmail,
-        })
-        if (error) return apiError(request, error.message, 422)
-        await sendCompletionReport(deliveryMatch[1])
-        return response(request, data)
+        return apiError(request, 'تم إلغاء تأكيد QR. حدّث التطبيق وارفع الفاتورة الموقعة لمراجعة الإدارة.', 410)
       }
     }
 

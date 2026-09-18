@@ -4,10 +4,9 @@
     const apiBase = (window.TALLAGTY_API_BASE_URL || '').replace(/\/$/, '');
     const statusLabels = {
         pending_assignment: 'بانتظار مراجعة الإدارة', deferred_review: 'مؤجل للمراجعة', approved: 'تمت الموافقة',
-        assigned: 'تم الإسناد للمندوب', preparing: 'قيد التجهيز', out_for_delivery: 'خرج للتوصيل', completed: 'مكتمل', cancelled: 'ملغي',
+        assigned: 'تم الإسناد للمندوب', preparing: 'قيد التجهيز', out_for_delivery: 'خرج للتوصيل', pending_delivery_review: 'بانتظار تأكيد التسليم', delivery_proof_rejected: 'إثبات التسليم قيد التصحيح', completed: 'مكتمل', cancelled: 'ملغي',
     };
     const cancellableStatuses = new Set(['pending_assignment', 'deferred_review', 'approved', 'assigned', 'preparing']);
-    const qrStatuses = new Set(['assigned', 'preparing', 'out_for_delivery']);
     const money = new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'EGP' });
     const deviceKey = 'talagtyCustomerDevice';
     const tokenKey = 'talagtyCustomerToken';
@@ -55,14 +54,11 @@
 
     function orderCard(order) {
         const canCancel = cancellableStatuses.has(order.status);
-        const hasQr = qrStatuses.has(order.status) && order.delivery_qr_payload;
-        const receiveButton = hasQr ? `<button class="receive-order" data-receive="${escapeHtml(order.order_id)}">استلام أوردر</button>`
-            : order.status === 'completed' ? '<span class="received-label">تم استلام الأوردر</span>'
-                : order.status === 'cancelled' ? '' : '<button class="receive-order waiting" type="button" disabled>استلام أوردر بعد الإسناد</button>';
+        const receiveButton = order.status === 'completed' ? `<button class="receive-order" data-invoice="${escapeHtml(order.order_id)}">عرض الفاتورة النهائية</button>` : '';
         const cancelButton = canCancel ? `<button class="cancel-order" data-cancel="${escapeHtml(order.order_id)}">إلغاء الطلب</button>` : '';
         const items = (order.items || []).map(item => `<li><span>${escapeHtml(item.name)} × ${Number(item.quantity)}</span><strong>${money.format(Number(item.line_total || 0))}</strong></li>`).join('');
-        const latestTimeline = (order.timeline || []).slice(-3).reverse().map(item => `<li><span>${escapeHtml(statusLabels[item.status] || item.status)}</span><time>${formatDate(item.created_at)}</time></li>`).join('');
-        return `<article class="track-order" data-order="${escapeHtml(order.order_id)}"><header><div><h2>${escapeHtml(order.order_number)}</h2><time>${formatDate(order.created_at)}</time></div><span class="track-status ${escapeHtml(order.status)}">${escapeHtml(statusLabels[order.status] || order.status)}</span></header><p class="order-address">${escapeHtml(order.customer_address_text || '')}</p><details><summary>تفاصيل الفاتورة</summary><ul class="track-items">${items}</ul>${latestTimeline ? `<h3>آخر التحديثات</h3><ul class="track-timeline">${latestTimeline}</ul>` : ''}</details><footer><strong>${money.format(Number(order.total || 0))}</strong><div class="order-buttons">${cancelButton}${receiveButton}</div></footer></article>`;
+        const latestTimeline = [...(order.timeline || [])].sort((a,b) => new Date(b.created_at)-new Date(a.created_at)).map(item => `<li><span>${escapeHtml(statusLabels[item.status] || item.status)}</span><time>${formatDate(item.created_at)}</time></li>`).join('');
+        return `<article class="track-order" data-order="${escapeHtml(order.order_id)}"><header><div><h2>${escapeHtml(order.order_number)}</h2><time>${formatDate(order.created_at)}</time></div><span class="track-status ${escapeHtml(order.status)}">${escapeHtml(statusLabels[order.status] || order.status)}</span></header><p class="order-address">${escapeHtml(order.customer_address_text || '')}</p><details><summary>تفاصيل الطلب</summary><ul class="track-items">${items}</ul></details>${latestTimeline ? `<h3>سجل حالة الطلب</h3><ul class="track-timeline">${latestTimeline}</ul>` : ''}${!['completed','cancelled'].includes(order.status) ? '<p>تظهر الفاتورة النهائية بعد اعتماد الإدارة للتسليم.</p>' : ''}<footer><strong>${money.format(Number(order.total || 0))}</strong><div class="order-buttons">${cancelButton}${receiveButton}</div></footer></article>`;
     }
 
     function renderOrders() { $('track-list').innerHTML = orders.length ? orders.map(orderCard).join('') : '<div class="empty-track">لا توجد طلبات مرتبطة بهذا الرقم.</div>'; }
@@ -96,13 +92,11 @@
     $('refresh-orders').addEventListener('click', async event => { setBusy(event.currentTarget, true, 'جاري التحديث…'); await loadOrders(); setBusy(event.currentTarget, false); });
 
     document.addEventListener('click', async event => {
-        const receiveButton = event.target.closest('[data-receive]');
-        if (receiveButton) {
-            const order = orders.find(item => String(item.order_id) === String(receiveButton.dataset.receive)); if (!order?.delivery_qr_payload) return;
-            $('receipt-modal').hidden = false; $('receipt-order-number').textContent = order.order_number; $('receipt-offline-note').textContent = navigator.onLine ? 'الرمز جاهز للمسح.' : 'لا يوجد إنترنت، لكن الرمز محفوظ وجاهز للمسح.';
-            const qrBox = $('receipt-qr'); qrBox.innerHTML = '';
-            if (window.QRCode) new window.QRCode(qrBox, { text: order.delivery_qr_payload, width: 240, height: 240, colorDark: '#172033', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.M });
-            else qrBox.textContent = 'تعذر رسم الرمز. اتصل بالإنترنت مرة واحدة ثم حاول مجدداً.';
+        const invoiceButton = event.target.closest('[data-invoice]');
+        if (invoiceButton) {
+            const order = orders.find(item => String(item.order_id) === invoiceButton.dataset.invoice); if (order?.status !== 'completed') return;
+            $('receipt-modal').hidden = false;
+            $('final-invoice').innerHTML = `<h2>تلاجتى — فاتورة نهائية</h2><p>${escapeHtml(order.order_number)}</p><p>${escapeHtml(order.customer_name)} — ${escapeHtml(order.customer_phone)}</p><p>${escapeHtml(order.customer_address_text)}</p><p>اعتماد التسليم: ${formatDate(order.completed_at)}</p><ul class="track-items">${order.items.map(item => `<li><span>${escapeHtml(item.name)} × ${Number(item.quantity)} — ${money.format(Number(item.unit_price))}</span><strong>${money.format(Number(item.line_total))}</strong></li>`).join('')}</ul><p>التوصيل: ${money.format(Number(order.delivery_fee || 0))}</p><strong>الإجمالي: ${money.format(Number(order.total))}</strong><p>المدفوع: ${money.format(Number(order.amount_paid || 0))}</p>`;
         }
         const cancelButton = event.target.closest('[data-cancel]');
         if (cancelButton) {
@@ -114,11 +108,12 @@
     });
 
     $('close-receipt').addEventListener('click', () => { $('receipt-modal').hidden = true; });
+    $('print-final-invoice').addEventListener('click', () => window.print());
     $('receipt-modal').addEventListener('click', event => { if (event.target === $('receipt-modal')) $('receipt-modal').hidden = true; });
     window.addEventListener('online', () => { $('connection-state').textContent = 'متصل'; if (token) loadOrders(); });
-    window.addEventListener('offline', () => { $('connection-state').textContent = 'دون اتصال'; setMessage('orders-message', 'أنت دون اتصال. رموز الاستلام والطلبات المحفوظة ما زالت متاحة.'); });
+    window.addEventListener('offline', () => { $('connection-state').textContent = 'دون اتصال'; setMessage('orders-message', 'أنت دون اتصال. نعرض آخر حالة محفوظة للطلبات.'); });
 
     $('track-phone').value = phone; $('connection-state').textContent = navigator.onLine ? 'متصل' : 'دون اتصال';
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./track-sw.js?v=5').catch(() => {});
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./track-sw.js?v=6').catch(() => {});
     if (token) loadOrders(); else showView('phone-view');
 })();

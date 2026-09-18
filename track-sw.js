@@ -1,22 +1,20 @@
-const CACHE_NAME = 'talagty-app-v5';
+const CACHE_NAME = 'talagty-app-v6';
 const APP_SHELL = [
     './track.html',
-    './track.css?v=manual-whatsapp-1',
-    './track.js?v=manual-whatsapp-2',
+    './track.css?v=delivery-review-1',
+    './track.js?v=delivery-review-1',
     './supplier.html',
-    './supplier.css',
-    './supplier.js?v=unified-cache-1',
+    './supplier.css?v=delivery-review-1',
+    './supplier.js?v=delivery-review-1',
     './supplier-manifest.json',
     './style.css?v=store-cleanup-v1',
     './api-config.js'
 ];
-const QR_LIBRARY = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
 
 self.addEventListener('install', event => {
     event.waitUntil((async () => {
         const cache = await caches.open(CACHE_NAME);
         await cache.addAll(APP_SHELL);
-        try { await cache.add(QR_LIBRARY); } catch {}
         await self.skipWaiting();
     })());
 });
@@ -34,7 +32,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
     const url = new URL(event.request.url);
-    if (url.origin !== self.location.origin && url.href !== QR_LIBRARY) return;
+    if (url.origin !== self.location.origin) return;
     if (url.pathname.includes('/functions/v1/') || url.pathname.includes('/api/')) return;
 
     event.respondWith((async () => {

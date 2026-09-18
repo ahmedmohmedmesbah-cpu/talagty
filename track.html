@@ -7,7 +7,7 @@
     <meta name="description" content="متابعة طلبات تلاجتى بأمان من هاتف العميل">
     <title>متابعة فاتورتك - تلاجتى</title>
     <link rel="stylesheet" href="style.css?v=store-cleanup-v1">
-    <link rel="stylesheet" href="track.css?v=manual-whatsapp-1">
+    <link rel="stylesheet" href="track.css?v=delivery-review-1">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -61,12 +61,9 @@
     <div class="receipt-modal" id="receipt-modal" hidden>
         <div class="receipt-card" role="dialog" aria-modal="true" aria-labelledby="receipt-title">
             <button id="close-receipt" type="button" aria-label="إغلاق">×</button>
-            <span>تأكيد الاستلام</span>
-            <h2 id="receipt-title">اعرض الرمز للمندوب</h2>
-            <p>يفتح المندوب «تسليم أوردر» ويمسح هذا الرمز. الرمز محفوظ مع الطلب ويعمل بعد تحميله حتى دون اتصال.</p>
-            <div id="receipt-qr" class="receipt-qr"></div>
-            <strong id="receipt-order-number" class="receipt-order-number"></strong>
-            <p id="receipt-offline-note" class="receipt-offline-note"></p>
+            <h2 id="receipt-title">الفاتورة المعتمدة</h2>
+            <div id="final-invoice"></div>
+            <p><button type="button" id="print-final-invoice">طباعة / حفظ PDF</button></p>
         </div>
     </div>
 
@@ -77,8 +74,7 @@
         <a href="index.html?cart=1" aria-label="فتح سلة المشتريات"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h2l2 11h12l2-8H6M9 20h.01M17 20h.01"/></svg><span>السلة</span></a>
     </nav>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="api-config.js"></script>
-    <script src="track.js?v=manual-whatsapp-2"></script>
+    <script src="track.js?v=delivery-review-1"></script>
 </body>
 </html>
