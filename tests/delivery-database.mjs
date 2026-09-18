@@ -17,7 +17,7 @@ try {
   for (const file of ['backend/sql/001_initial_schema.sql','backend/sql/003_users_and_admin.sql','backend/sql/004_supplier_notifications.sql',
     'supabase/migrations/005_order_workflow_functions.sql','supabase/migrations/006_admin_supplier_operations.sql',
     'supabase/migrations/007_secure_delivery_confirmation.sql','supabase/migrations/013_delivery_review_statuses.sql',
-    'supabase/migrations/014_signed_delivery_review.sql']) await sqlFile(file);
+    'supabase/migrations/014_signed_delivery_review.sql','supabase/migrations/015_remove_supplier_accounts.sql']) await sqlFile(file);
   // Applying the new migration twice must be harmless.
   await sqlFile('supabase/migrations/014_signed_delivery_review.sql');
   await db.exec(`INSERT INTO users(email,full_name,password_hash,role) VALUES

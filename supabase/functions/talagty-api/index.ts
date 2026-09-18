@@ -604,7 +604,7 @@ Deno.serve(async (request) => {
       }
 
       if (request.method === 'GET' && route === '/api/admin/suppliers') {
-        const { data, error } = await admin.from('suppliers').select('id,business_name,national_id,vehicle_details,is_available,users(full_name,email,phone_normalized,phone_verified_at)').order('id')
+        const { data, error } = await admin.from('suppliers').select('id,business_name,national_id,vehicle_details,is_available,users(full_name,email,phone_normalized,phone_verified_at)').is('removed_at', null).order('id')
         if (error) throw error
         return response(request, (data ?? []).map((supplier: any) => { const user = relationOne(supplier.users); return { supplier_id: supplier.id, business_name: supplier.business_name, full_name: user?.full_name, email: user?.email, phone: user?.phone_normalized, national_id: supplier.national_id, vehicle_details: supplier.vehicle_details, is_available: supplier.is_available, is_activated: Boolean(user?.phone_verified_at) } }))
       }
@@ -636,8 +636,16 @@ Deno.serve(async (request) => {
         return response(request, { supplier_id: supplier.id, full_name: user.full_name, activation_code: activationCode, activation_expires_in_hours: 24 }, 201)
       }
       const resetDeviceMatch = route.match(/^\/api\/admin\/suppliers\/(\d+)\/reset-device$/)
+      const removeSupplierMatch = route.match(/^\/api\/admin\/suppliers\/(\d+)$/)
+      if (request.method === 'DELETE' && removeSupplierMatch) {
+        const supplierId = Number(removeSupplierMatch[1])
+        if (!Number.isSafeInteger(supplierId) || supplierId <= 0) return apiError(request, 'رقم المندوب غير صحيح', 422)
+        const { data, error } = await admin.rpc('remove_supplier_account', { p_supplier_id: supplierId, p_actor_user_id: claims.sub })
+        if (error) return apiError(request, error.message, 409)
+        return response(request, data)
+      }
       if (request.method === 'POST' && resetDeviceMatch) {
-        const { data: supplier } = await admin.from('suppliers').select('user_id').eq('id', Number(resetDeviceMatch[1])).maybeSingle()
+        const { data: supplier } = await admin.from('suppliers').select('user_id').eq('id', Number(resetDeviceMatch[1])).is('removed_at', null).maybeSingle()
         if (!supplier) return apiError(request, 'المورد غير موجود', 404)
         const activationCode = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0')
         const { error } = await admin.from('users').update({ phone_verified_at: null, device_id_hash: null, device_activated_at: null, activation_code_hash: await sha256(activationCode), activation_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() }).eq('id', supplier.user_id)
